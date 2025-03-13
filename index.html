@@ -14,10 +14,8 @@
 </head>
 <body>
   <h1>Quranic Verse Midjourney Prompt Generator</h1>
-  <p>Enter your Anthropic API key and verse details below:</p>
+  <p>Enter the verse details below (the Anthropic API key is securely handled via the Vercel proxy):</p>
   <form id="promptForm">
-    <label for="apiKey">Anthropic API Key:</label><br>
-    <input type="text" id="apiKey" required /><br>
     <label for="surah">Starting Surah Number (1-114):</label><br>
     <input type="number" id="surah" min="1" max="114" required /><br>
     <label for="verse">Starting Verse Number (>=1):</label><br>
@@ -40,7 +38,7 @@
   <div id="versionInfo" class="version"></div>
   
   <script>
-    // Set version using document.lastModified so it changes with each commit..
+    // Set version using document.lastModified so it changes with each commit.
     const modifiedDate = new Date(document.lastModified);
     document.getElementById("versionInfo").textContent = "Version: " + modifiedDate.toLocaleString("en-AU");
     
@@ -57,14 +55,13 @@
       const lines = text.split("\n").filter(line => line.trim() !== "");
       let corrected = [];
       for (let i = 0; i < batch; i++) {
-        const code = `${pad(startSurah, 3)}${pad(startSurah, 3)}`; // Oops: Correction needed below!
-        const codeFixed = `${pad(startSurah, 3)}${pad(startVerse + i, 3)} - `;
+        const code = `${pad(startSurah, 3)}${pad(startVerse + i, 3)} - `;
         if (i < lines.length) {
           let parts = lines[i].split(" - ");
           let content = parts.length > 1 ? parts.slice(1).join(" - ").trim() : lines[i].trim();
-          corrected.push(codeFixed + content);
+          corrected.push(code + content);
         } else {
-          corrected.push(codeFixed);
+          corrected.push(code);
         }
       }
       return corrected.join("\n");
@@ -94,13 +91,12 @@
     // Form submission handler.
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
-      const apiKey = document.getElementById("apiKey").value.trim();
       const surah = parseInt(document.getElementById("surah").value);
       const verse = parseInt(document.getElementById("verse").value);
       const batch = parseInt(document.getElementById("batch").value);
       
       // Basic input validation.
-      if (!apiKey || isNaN(surah) || isNaN(verse) || isNaN(batch) ||
+      if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
           surah < 1 || surah > 114 || verse < 1 || batch < 1 || batch > 7000) {
         alert("Please enter valid inputs.");
         return;
