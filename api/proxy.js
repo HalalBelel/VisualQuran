@@ -18,12 +18,13 @@ export default async function handler(req, res) {
     const response = await fetch(apiUrl, {
       method: req.method,
       headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY, // Stored in Vercel Environment Variables.
+        "x-api-key": process.env.ANTHROPIC_API_KEY, // Set this in Vercel Environment Variables.
         "Content-Type": "application/json",
         "anthropic-version": "2023-06-01"
       },
       body: req.method === "GET" ? null : JSON.stringify(req.body)
     });
+    
     const data = await response.json();
     res.status(response.status).json(data);
   } catch (error) {
