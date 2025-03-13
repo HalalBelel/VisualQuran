@@ -1,11 +1,24 @@
 // api/proxy.js
+
 export default async function handler(req, res) {
+  // Set CORS headers to allow requests from any origin.
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key, anthropic-version");
+
+  // Handle preflight (OPTIONS) requests.
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+  
   const apiUrl = "https://api.anthropic.com/v1/messages";
+  
   try {
     const response = await fetch(apiUrl, {
       method: req.method,
       headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY, // This will be set in Vercel's environment variables.
+        "x-api-key": process.env.ANTHROPIC_API_KEY, // Stored in Vercel Environment Variables.
         "Content-Type": "application/json",
         "anthropic-version": "2023-06-01"
       },
