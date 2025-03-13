@@ -14,7 +14,7 @@
 </head>
 <body>
   <h1>Quranic Verse Midjourney Prompt Generator</h1>
-  <p>Enter the verse details below (Anthropic API key is handled by the proxy):</p>
+  <p>Enter the verse details below (Anthropic API key is handled by the Vercel proxy):</p>
   <form id="promptForm">
     <label for="surah">Starting Surah Number (1-114):</label><br>
     <input type="number" id="surah" min="1" max="114" required /><br>
@@ -159,7 +159,14 @@
           throw new Error("No content in response");
         }
         
-        const rawText = data.content;
+        // If data.content is an array, join the text fields.
+        let rawText = "";
+        if (Array.isArray(data.content)) {
+          rawText = data.content.map(item => item.text).join("\n");
+        } else {
+          rawText = data.content;
+        }
+        
         document.getElementById("rawOutput").innerText = rawText;
         
         // Force prefill naming and append parameters.
