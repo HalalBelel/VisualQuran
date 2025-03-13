@@ -14,10 +14,10 @@
 </head>
 <body>
   <h1>Quranic Verse Midjourney Prompt Generator</h1>
-  <p>Enter your Anthropic API key and verse details below (though the key won't be used if you're calling the proxy):</p>
+  <p>Enter your Anthropic API key and verse details below:</p>
   <form id="promptForm">
-    <label for="apiKey">Anthropic API Key (not used if proxy is set):</label><br>
-    <input type="text" id="apiKey" /><br>
+    <label for="apiKey">Anthropic API Key:</label><br>
+    <input type="text" id="apiKey" required /><br>
     <label for="surah">Starting Surah Number (1-114):</label><br>
     <input type="number" id="surah" min="1" max="114" required /><br>
     <label for="verse">Starting Verse Number (>=1):</label><br>
@@ -33,6 +33,7 @@
   <h2>Final Output</h2>
   <div id="finalOutput" class="output"></div>
   
+  <!-- Debug Output - can be removed later -->
   <h2>Debug Information</h2>
   <pre id="debugOutput" class="debug"></pre>
   
@@ -56,13 +57,14 @@
       const lines = text.split("\n").filter(line => line.trim() !== "");
       let corrected = [];
       for (let i = 0; i < batch; i++) {
-        const code = `${pad(startSurah, 3)}${pad(startVerse + i, 3)} - `;
+        const code = `${pad(startSurah, 3)}${pad(startSurah, 3)}`; // Oops: Correction needed below!
+        const codeFixed = `${pad(startSurah, 3)}${pad(startVerse + i, 3)} - `;
         if (i < lines.length) {
           let parts = lines[i].split(" - ");
           let content = parts.length > 1 ? parts.slice(1).join(" - ").trim() : lines[i].trim();
-          corrected.push(code + content);
+          corrected.push(codeFixed + content);
         } else {
-          corrected.push(code);
+          corrected.push(codeFixed);
         }
       }
       return corrected.join("\n");
@@ -92,16 +94,13 @@
     // Form submission handler.
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
-      
-      // We still allow user to input an API key if they want to call Anthropic directly, 
-      // but if using proxy, that won't matter.
-      const userApiKey = document.getElementById("apiKey").value.trim();
+      const apiKey = document.getElementById("apiKey").value.trim();
       const surah = parseInt(document.getElementById("surah").value);
       const verse = parseInt(document.getElementById("verse").value);
       const batch = parseInt(document.getElementById("batch").value);
       
       // Basic input validation.
-      if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
+      if (!apiKey || isNaN(surah) || isNaN(verse) || isNaN(batch) ||
           surah < 1 || surah > 114 || verse < 1 || batch < 1 || batch > 7000) {
         alert("Please enter valid inputs.");
         return;
@@ -113,10 +112,9 @@
       }
       
       // Compute expected prefill using PREFILL_TEMPLATE.
-      const expectedPrefill = config.PREFILL_TEMPLATE
-        .replace("{SURAH_PADDED}", pad(surah, 3))
-        .replace("{VERSE_PADDED}", pad(verse, 3))
-        .trim();
+      const expectedPrefill = config.PREFILL_TEMPLATE.replace("{SURAH_PADDED}", pad(surah, 3))
+                                                      .replace("{VERSE_PADDED}", pad(verse, 3))
+                                                      .trim();
       
       // Fill in the user instruction template.
       let userInstruction = config.USER_INSTRUCTION_TEMPLATE
@@ -144,16 +142,13 @@
       document.getElementById("rawOutput").innerText = "Generating prompts...";
       document.getElementById("finalOutput").innerText = "";
       
-      // Use your Vercel proxy URL from a.json instead of Anthropic's direct endpoint.
-      // e.g., "https://<your-vercel-project>.vercel.app/api/proxy"
-      const proxyUrl = config.VERCEL_PROXY_URL;  // We'll store it in a.json and user can edit it.
+      // Use the proxy URL from a.json.
+      const proxyUrl = config.VERCEL_PROXY_URL;
       
       try {
         const response = await fetch(proxyUrl, {
           method: "POST",
           headers: {
-            // No Anthropic key needed in the client, 
-            // because the proxy will use the environment variable on Vercel.
             "Content-Type": "application/json"
           },
           body: JSON.stringify(payload)
