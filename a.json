@@ -6,5 +6,5 @@
   "MODEL_NAME": "claude-3-7-sonnet-20250219",
   "MAX_TOKENS_MULTIPLIER": 100,
   "MAX_TOKENS_OVERHEAD": 100,
-  "VERCEL_PROXY_URL": "https://visual-quran-7sozrwsbc-halalbelels-projects.vercel.app/api/proxy"
+  "VERCEL_PROXY_URL": "https://visual-quran-git-main-halalbelels-projects.vercel.app/api/proxy"
 }
