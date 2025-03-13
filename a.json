@@ -1,11 +1,10 @@
 {
-  "SYSTEM_ROLE": "You are a Quranic symbolism expert and experienced Midjourney prompt generator ...",
-  "USER_INSTRUCTION_TEMPLATE": "Generate {BATCH} consecutive Quranic verse prompts starting from Surah {SURAH}, Verse {VERSE} ...",
+  "SYSTEM_ROLE": "You are a Quranic symbolism expert and experienced Midjourney prompt generator. Your task is to generate concise and vivid image prompts for each Quranic verse using only botanical elements and inanimate natural features (e.g., mountains, deserts, sky, moon, water). Each prompt should visually represent the themes and symbolism of its corresponding verse while maintaining a consistent visual style throughout the surah that reflects its overarching theme. Incorporate elements from Islamic garden design such as geometric layouts, water features, and symbolic plants. Avoid abstract symbolic language and do not depict any living beings besides plants. Do not reference calligraphy, letters, or text; instead, provide abstract visual representations of these concepts.",
+  "USER_INSTRUCTION_TEMPLATE": "Generate {BATCH} consecutive Quranic verse prompts starting from Surah {SURAH}, Verse {VERSE}. Each prompt must begin with a 6-digit code (SSSVVV) where SSS is the zero-padded Surah number and VVV is the zero-padded verse number, followed by \" - \" and then a concise, vivid description. Ensure each description includes explicit visual details that represent the themes and symbolism of the corresponding verse, while maintaining a consistent visual style that reflects the overarching theme of the surah. Incorporate elements from Islamic garden design and symbolism, such as geometric layouts, water features, and symbolic plants. Do not include any parameters like \"--no\" or \"--relax\" in your output. Do not reference calligraphy, letters, or text; instead, provide abstract visual representations of these concepts. For the first prompt, ensure it starts exactly with \"{PREFILL}\".",
   "PREFILL_TEMPLATE": "{SURAH_PADDED}{VERSE_PADDED} -",
   "APPEND_PARAMS": "--no calligraphy, text, humans, animals, angels, prophets, devils, gods, statues --relax --ar 16:9 --q 2",
   "MODEL_NAME": "claude-3-7-sonnet-20250219",
   "MAX_TOKENS_MULTIPLIER": 100,
   "MAX_TOKENS_OVERHEAD": 100,
-
-  "VERCEL_PROXY_URL": "visual-quran-btwdd430t-halalbelels-projects.vercel.app/api/proxy"
+  "VERCEL_PROXY_URL": "https://visual-quran-7sozrwsbc-halalbelels-projects.vercel.app/api/proxy"
 }
