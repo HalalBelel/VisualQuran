@@ -1,191 +1,195 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Quranic Verse Midjourney Prompt Generator</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    input, button, textarea { margin: 5px 0; font-size: 1rem; }
-    textarea { width: 100%; height: 200px; }
-    .output { white-space: pre-wrap; background: #f7f7f7; padding: 10px; border: 1px solid #ccc; }
-    .debug { font-family: monospace; color: #555; margin-top: 20px; }
-    .version { margin-top: 20px; font-size: 0.9rem; color: #777; }
-  </style>
-</head>
-<body>
-  <h1>Quranic Verse Midjourney Prompt Generator</h1>
-  <p>Enter the verse details below (Anthropic API key is handled by the Vercel proxy):</p>
-  <form id="promptForm">
-    <label for="surah">Starting Surah Number (1-114):</label><br>
-    <input type="number" id="surah" min="1" max="114" required /><br>
-    <label for="verse">Starting Verse Number (>=1):</label><br>
-    <input type="number" id="verse" min="1" required /><br>
-    <label for="batch">Number of Consecutive Verses (1-7000):</label><br>
-    <input type="number" id="batch" min="1" max="7000" required /><br>
-    <button type="submit">Generate Prompts</button>
-  </form>
-  
-  <h2>Raw Output</h2>
-  <div id="rawOutput" class="output"></div>
-  
-  <h2>Final Output</h2>
-  <div id="finalOutput" class="output"></div>
-  
-  <!-- Debug Output - can be removed later -->
-  <h2>Debug Information</h2>
-  <pre id="debugOutput" class="debug"></pre>
-  
-  <div id="versionInfo" class="version"></div>
-  
-  <script>
-    // Set version using document.lastModified so it changes with each commit.
-    const modifiedDate = new Date(document.lastModified);
-    document.getElementById("versionInfo").textContent = "Version: " + modifiedDate.toLocaleString("en-AU");
-    
-    // Debug flag (set to false to disable debug output)
-    const debug = true;
-    
-    // Utility function to pad numbers with leading zeros.
-    function pad(num, size) {
-      return num.toString().padStart(size, '0');
-    }
-    
-    // Revised function: Split text into paragraphs using double newlines.
-    function forcePrefillNaming(text, startSurah, startVerse, batch) {
-      const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
-      let corrected = [];
-      for (let i = 0; i < batch; i++) {
-        const code = `${pad(startSurah, 3)}${pad(startVerse + i, 3)} - `;
-        let content = "";
-        if (i < paragraphs.length) {
-          let p = paragraphs[i].trim();
-          // Remove existing code if present.
-          const index = p.indexOf(" - ");
-          if (index !== -1) {
-            content = p.substring(index + 3).trim();
-          } else {
-            content = p;
-          }
-        }
-        corrected.push(code + content);
-      }
-      return corrected.join("\n");
-    }
-    
-    // Append a parameter string to each line.
-    function appendParameters(text, params) {
-      const lines = text.split("\n").filter(line => line.trim() !== "");
-      return lines.map(line => line.trim() + " " + params).join("\n");
-    }
-    
-    // Load configuration from a.json.
-    let config = {};
-    fetch("a.json")
-      .then(response => response.json())
-      .then(data => {
-        config = data;
-        if(debug) {
-          document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(config, null, 2) + "\n\n";
-        }
-      })
-      .catch(err => {
-        console.error("Error loading configuration:", err);
-        alert("Failed to load configuration (a.json).");
-      });
-    
-    // Form submission handler.
-    document.getElementById("promptForm").addEventListener("submit", async function(e) {
-      e.preventDefault();
-      const surah = parseInt(document.getElementById("surah").value);
-      const verse = parseInt(document.getElementById("verse").value);
-      const batch = parseInt(document.getElementById("batch").value);
-      
-      // Basic input validation.
-      if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
-          surah < 1 || surah > 114 || verse < 1 || batch < 1 || batch > 7000) {
-        alert("Please enter valid inputs.");
-        return;
-      }
-      
-      if (Object.keys(config).length === 0) {
-        alert("Configuration not loaded. Please try again later.");
-        return;
-      }
-      
-      // Compute expected prefill using PREFILL_TEMPLATE.
-      const expectedPrefill = config.PREFILL_TEMPLATE.replace("{SURAH_PADDED}", pad(surah, 3))
-                                                      .replace("{VERSE_PADDED}", pad(verse, 3))
-                                                      .trim();
-      
-      // Fill in the user instruction template.
-      let userInstruction = config.USER_INSTRUCTION_TEMPLATE
-          .replace("{BATCH}", batch)
-          .replace("{SURAH}", surah)
-          .replace("{VERSE}", verse)
-          .replace("{PREFILL}", expectedPrefill);
-      
-      // Build the payload.
-      const maxTokens = batch * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
-      const payload = {
-        model: config.MODEL_NAME,
-        max_tokens: maxTokens,
-        system: config.SYSTEM_ROLE,
-        messages: [
-          { role: "user", content: userInstruction },
-          { role: "assistant", content: expectedPrefill }
-        ]
-      };
-      
-      if(debug) {
-        document.getElementById("debugOutput").innerText += "Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
-      }
-      
-      document.getElementById("rawOutput").innerText = "Generating prompts...";
-      document.getElementById("finalOutput").innerText = "";
-      
-      // Use the proxy URL from a.json.
-      const proxyUrl = config.VERCEL_PROXY_URL;
-      
-      try {
-        const response = await fetch(proxyUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        const data = await response.json();
-        if(debug) {
-          document.getElementById("debugOutput").innerText += "Full API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
-        }
-        
-        if (!data.content) {
-          throw new Error("No content in response");
-        }
-        
-        // If data.content is an array, join the text fields.
-        let rawText = "";
-        if (Array.isArray(data.content)) {
-          rawText = data.content.map(item => item.text).join("\n\n");
+<script>
+  // Set version using document.lastModified so it changes with each commit.
+  const modifiedDate = new Date(document.lastModified);
+  document.getElementById("versionInfo").textContent = "Version: " + modifiedDate.toLocaleString("en-AU");
+
+  // Debug flag (set to false to disable debug output)
+  const debug = true;
+
+  // Utility function to pad numbers with leading zeros.
+  function pad(num, size) {
+    return num.toString().padStart(size, '0');
+  }
+
+  // Splits the Anthropic text into paragraphs and forces each prompt to have a proper code.
+  function forcePrefillNaming(text, startSurah, startVerse, batch) {
+    const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
+    let corrected = [];
+    for (let i = 0; i < batch; i++) {
+      const code = `${pad(startSurah, 3)}${pad(startVerse + i, 3)} - `;
+      let content = "";
+      if (i < paragraphs.length) {
+        let p = paragraphs[i].trim();
+        const index = p.indexOf(" - ");
+        if (index !== -1) {
+          content = p.substring(index + 3).trim();
         } else {
-          rawText = data.content;
-        }
-        
-        document.getElementById("rawOutput").innerText = rawText;
-        
-        // Force prefill naming and append parameters.
-        const numbered = forcePrefillNaming(rawText, surah, verse, batch);
-        const finalText = appendParameters(numbered, config.APPEND_PARAMS);
-        document.getElementById("finalOutput").innerText = finalText;
-      } catch (error) {
-        console.error("Error:", error);
-        document.getElementById("rawOutput").innerText = "Error generating prompts.";
-        if(debug) {
-          document.getElementById("debugOutput").innerText += "Error Details:\n" + error.toString() + "\n";
+          content = p;
         }
       }
+      corrected.push(code + content);
+    }
+    return corrected.join("\n");
+  }
+
+  // Appends the Midjourney parameters to each prompt.
+  function appendParameters(text, params) {
+    const lines = text.split("\n").filter(line => line.trim() !== "");
+    return lines.map(line => line.trim() + " " + params).join("\n");
+  }
+
+  // Load configuration from a.json.
+  let config = {};
+  fetch("a.json")
+    .then(response => response.json())
+    .then(data => {
+      config = data;
+      if(debug) {
+        document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(config, null, 2) + "\n\n";
+      }
+    })
+    .catch(err => {
+      console.error("Error loading configuration:", err);
+      alert("Failed to load configuration (a.json).");
     });
-  </script>
-</body>
-</html>
+
+  // Function to send prompts to the Midjourney endpoint and poll for images.
+  async function sendToMidjourney(finalText) {
+    const prompts = finalText.split("\n").filter(line => line.trim() !== "");
+    const requestId = Date.now().toString();
+    // Use the real Vercel deployment URL from your configuration.
+    const mjEndpoint = "https://visual-quran-git-main-halalbelels-projects.vercel.app/api/mjwebhook";
+
+    // 1. Send the prompts via a POST request.
+    let response = await fetch(mjEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompts, requestId })
+    });
+    let result = await response.json();
+    if (!result.success) {
+      console.error("Error sending prompts:", result.error);
+      return;
+    }
+
+    // 2. Poll for images every 5 seconds, for up to 30 attempts.
+    let attempts = 0;
+    const maxAttempts = 30;
+    const pollUrl = `${mjEndpoint}?requestId=${requestId}`;
+
+    while (attempts < maxAttempts) {
+      await new Promise(r => setTimeout(r, 5000)); // wait 5 seconds
+      const pollRes = await fetch(pollUrl);
+      if (pollRes.ok) {
+        const pollData = await pollRes.json();
+        if (pollData.resolved && pollData.images.length > 0) {
+          const imageOutput = document.getElementById("imageOutput");
+          imageOutput.innerHTML = ""; // Clear any previous images.
+          pollData.images.forEach(url => {
+            const img = document.createElement("img");
+            img.src = url;
+            img.style.maxWidth = "100%";
+            imageOutput.appendChild(img);
+          });
+          return; // Stop polling once images are found.
+        }
+      }
+      attempts++;
+    }
+    console.error("Timed out waiting for Midjourney images.");
+  }
+
+  // Form submission handler.
+  document.getElementById("promptForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const surah = parseInt(document.getElementById("surah").value);
+    const verse = parseInt(document.getElementById("verse").value);
+    const batch = parseInt(document.getElementById("batch").value);
+
+    if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
+        surah < 1 || surah > 114 || verse < 1 || batch < 1 || batch > 7000) {
+      alert("Please enter valid inputs.");
+      return;
+    }
+
+    if (Object.keys(config).length === 0) {
+      alert("Configuration not loaded. Please try again later.");
+      return;
+    }
+
+    // Compute the expected prefill from the configuration.
+    const expectedPrefill = config.PREFILL_TEMPLATE
+      .replace("{SURAH_PADDED}", pad(surah, 3))
+      .replace("{VERSE_PADDED}", pad(verse, 3))
+      .trim();
+
+    // Build the user instruction from the template.
+    let userInstruction = config.USER_INSTRUCTION_TEMPLATE
+      .replace("{BATCH}", batch)
+      .replace("{SURAH}", surah)
+      .replace("{VERSE}", verse)
+      .replace("{PREFILL}", expectedPrefill);
+
+    // Build the payload for Anthropic.
+    const maxTokens = batch * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
+    const payload = {
+      model: config.MODEL_NAME,
+      max_tokens: maxTokens,
+      system: config.SYSTEM_ROLE,
+      messages: [
+        { role: "user", content: userInstruction },
+        { role: "assistant", content: expectedPrefill }
+      ]
+    };
+
+    if(debug) {
+      document.getElementById("debugOutput").innerText += "Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
+    }
+
+    document.getElementById("rawOutput").innerText = "Generating prompts...";
+    document.getElementById("finalOutput").innerText = "";
+    
+    // Call the Anthropic proxy.
+    try {
+      const response = await fetch(config.VERCEL_PROXY_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await response.json();
+      if(debug) {
+        document.getElementById("debugOutput").innerText += "Full API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
+      }
+      
+      if (!data.content) {
+        throw new Error("No content in response");
+      }
+      
+      let rawText = "";
+      if (Array.isArray(data.content)) {
+        rawText = data.content.map(item => item.text).join("\n\n");
+      } else {
+        rawText = data.content;
+      }
+      
+      document.getElementById("rawOutput").innerText = rawText;
+      
+      // Format the final output.
+      const numbered = forcePrefillNaming(rawText, surah, verse, batch);
+      const finalText = appendParameters(numbered, config.APPEND_PARAMS);
+      document.getElementById("finalOutput").innerText = finalText;
+      
+      // Now send the final prompts to Midjourney.
+      await sendToMidjourney(finalText);
+    } catch (error) {
+      console.error("Error:", error);
+      document.getElementById("rawOutput").innerText = "Error generating prompts.";
+      if(debug) {
+        document.getElementById("debugOutput").innerText += "Error Details:\n" + error.toString() + "\n";
+      }
+    }
+  });
+</script>
