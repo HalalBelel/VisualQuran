@@ -1,0 +1,11 @@
+{
+  "name": "visual-quran",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "next start"
+  },
+  "dependencies": {
+    "discord.js": "latest",
+    "express": "latest"
+  }
+}
