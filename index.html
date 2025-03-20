@@ -115,29 +115,6 @@
       border-radius: 4px;
       border: 1px solid #ccc;
     }
-    
-    /* On mobile, show the dropdowns and hide the number inputs for surah and batch */
-    @media (max-width: 600px) {
-      #surahNumberWrapper,
-      #batchNumberWrapper {
-        display: none;
-      }
-      #surahSelectWrapper,
-      #batchSelectWrapper {
-        display: block;
-      }
-      form {
-        flex-direction: column;
-      }
-    }
-    
-    /* On non-mobile, hide the select dropdowns for surah and batch */
-    @media (min-width: 601px) {
-      #surahSelectWrapper,
-      #batchSelectWrapper {
-        display: none;
-      }
-    }
   </style>
 </head>
 <body>
@@ -146,12 +123,7 @@
     <p>Enter the verse details below. (Anthropic API key is handled by the Vercel proxy.)</p>
     
     <form id="promptForm">
-      <!-- Desktop Surah input -->
-      <div id="surahNumberWrapper">
-        <label for="surahNumber">Starting Surah Number (1-114):</label>
-        <input type="number" id="surahNumber" min="1" max="114" required />
-      </div>
-      <!-- Mobile Surah dropdown -->
+      <!-- Surah dropdown for all sizes -->
       <div id="surahSelectWrapper">
         <label for="surahSelect">Select Surah:</label>
         <select id="surahSelect"></select>
@@ -160,14 +132,9 @@
         <label for="verse">Starting Verse Number (>=1):</label>
         <input type="number" id="verse" min="1" required />
       </div>
-      <!-- Desktop Batch input -->
-      <div id="batchNumberWrapper">
-        <label for="batch">Number of Consecutive Verses (1-3):</label>
-        <input type="number" id="batch" min="1" max="3" required />
-      </div>
-      <!-- Mobile Batch dropdown -->
+      <!-- Batch dropdown for all sizes -->
       <div id="batchSelectWrapper">
-        <label for="batchSelect">Number of Consecutive Verses:</label>
+        <label for="batchSelect">Select Consecutive Verses:</label>
         <select id="batchSelect">
           <option value="1">1</option>
           <option value="2">2</option>
@@ -192,12 +159,16 @@
     <pre id="debugOutput" class="debug"></pre>
     
     <div id="versionInfo" class="version"></div>
+    <pre id="updatesBox" class="version"></pre>
   </div>
   
   <script>
-    // Set version using document.lastModified so it changes with each commit.
+    // Author update and version stamp.
+    const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
     const modifiedDate = new Date(document.lastModified);
-    document.getElementById("versionInfo").textContent = "Version: " + modifiedDate.toLocaleString("en-AU");
+    const versionText = "Version: " + modifiedDate.toLocaleDateString("en-AU") + " " + modifiedDate.toLocaleTimeString("en-AU");
+    document.getElementById("versionInfo").textContent = versionText;
+    document.getElementById("updatesBox").textContent = AUTHOR_UPDATE + "\n" + versionText;
     
     // Debug flag (set to false to disable debug output)
     const debug = true;
@@ -265,7 +236,7 @@
           option.dataset.verses = item["Surah Verses"];
           surahSelect.appendChild(option);
         });
-        // If no surah was previously selected, set the verse max using the first option.
+        // Set the verse max using the first option.
         updateVerseMax(parseInt(surahSelect.value));
       })
       .catch(err => {
@@ -288,15 +259,8 @@
       }
     }
     
-    // Add event listeners to update verse max when surah changes.
-    // For mobile dropdown.
+    // Update verse max when surah selection changes.
     document.getElementById("surahSelect").addEventListener("change", function() {
-      const surahNum = parseInt(this.value);
-      updateVerseMax(surahNum);
-    });
-    
-    // For desktop number input.
-    document.getElementById("surahNumber").addEventListener("change", function() {
       const surahNum = parseInt(this.value);
       updateVerseMax(surahNum);
     });
@@ -334,22 +298,11 @@
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       
-      // Decide which surah value to use based on screen size.
-      let surah;
-      if (window.innerWidth <= 600) {
-        surah = parseInt(document.getElementById("surahSelect").value);
-      } else {
-        surah = parseInt(document.getElementById("surahNumber").value);
-      }
-      
+      // Use dropdown values for surah and batch.
+      const surah = parseInt(document.getElementById("surahSelect").value);
+      const batch = parseInt(document.getElementById("batchSelect").value);
       const verse = parseInt(document.getElementById("verse").value);
-      let batch;
-      if (window.innerWidth <= 600) {
-        batch = parseInt(document.getElementById("batchSelect").value);
-      } else {
-        batch = parseInt(document.getElementById("batch").value);
-      }
-    
+      
       // Check against the surah verse max if available.
       const verseMax = parseInt(document.getElementById("verse").max) || Infinity;
       if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
