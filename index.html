@@ -39,26 +39,25 @@
   <h2>Generated Image (From Stable Diffusion)</h2>
   <div id="imageOutput" class="output"></div>
 
-  <!-- Debug Output -->
   <h2>Debug Information</h2>
   <pre id="debugOutput" class="debug"></pre>
 
   <div id="versionInfo" class="version"></div>
 
   <script>
-    // Set version using document.lastModified so it changes with each commit
+    // Set version using document.lastModified so it changes with each commit.
     const modifiedDate = new Date(document.lastModified);
     document.getElementById("versionInfo").textContent = "Version: " + modifiedDate.toLocaleString("en-AU");
 
     // Debug flag (set to false to disable debug output)
     const debug = true;
 
-    // Utility function to pad numbers with leading zeros
+    // Utility function to pad numbers with leading zeros.
     function pad(num, size) {
       return num.toString().padStart(size, '0');
     }
 
-    // Splits the Anthropic text into paragraphs and forces each prompt to have a proper code
+    // Splits the Anthropic text into paragraphs and forces each prompt to have a proper code.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
       let corrected = [];
@@ -79,13 +78,13 @@
       return corrected.join("\n");
     }
 
-    // Appends extra parameters (like --ar 16:9) if desired
+    // Appends the Midjourney parameters (or your chosen parameters) to each prompt.
     function appendParameters(text, params) {
       const lines = text.split("\n").filter(line => line.trim() !== "");
       return lines.map(line => line.trim() + " " + params).join("\n");
     }
 
-    // Load config from a.json
+    // Load configuration from a.json.
     let config = {};
     fetch("a.json")
       .then(response => response.json())
@@ -100,18 +99,20 @@
         alert("Failed to load configuration (a.json).");
       });
 
-    // ! This function calls our new stablediffusion.js endpoint !
+    // This function calls our new stablediffusion endpoint.
     async function sendToStableDiffusion(finalText) {
-      // ! Replace <YOUR-VERCEL-APP> with your actual domain if needed !
-      const sdEndpoint = "https://visual-quran-git-main-halalbelels-projects.vercel.app/api/stablediffusion"; // ! edit if your domain is different !
+      // ! Replace <YOUR-VERCEL-APP> with your actual Vercel domain below !
+      const sdEndpoint = "https://visual-quran.vercel.app/api/stablediffusion"; 
+      
+      // Split the final text into individual prompts (one per line)
+      const prompts = finalText.split("\n").filter(line => line.trim() !== "");
+      const payload = { prompts };
 
-      const payload = { prompt: finalText };
       let response = await fetch(sdEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-
       let data = await response.json();
       if (!data.success) {
         console.error("Stability request failed:", data.error);
@@ -119,16 +120,18 @@
         return;
       }
 
-      // If success = true, we have a data URL in data.image
+      // data.images is an array of data URLs.
       const imageOutput = document.getElementById("imageOutput");
       imageOutput.innerHTML = "";
-      const img = document.createElement("img");
-      img.src = data.image;
-      img.style.maxWidth = "100%";
-      imageOutput.appendChild(img);
+      data.images.forEach((imgUrl) => {
+        const img = document.createElement("img");
+        img.src = imgUrl;
+        img.style.maxWidth = "100%";
+        imageOutput.appendChild(img);
+      });
     }
 
-    // Form submission handler
+    // Form submission handler.
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const surah = parseInt(document.getElementById("surah").value);
@@ -146,20 +149,20 @@
         return;
       }
 
-      // Build the prefill code
+      // Compute the expected prefill from the configuration.
       const expectedPrefill = config.PREFILL_TEMPLATE
         .replace("{SURAH_PADDED}", pad(surah, 3))
         .replace("{VERSE_PADDED}", pad(verse, 3))
         .trim();
 
-      // Build the user instruction
+      // Build the user instruction.
       let userInstruction = config.USER_INSTRUCTION_TEMPLATE
         .replace("{BATCH}", batch)
         .replace("{SURAH}", surah)
         .replace("{VERSE}", verse)
         .replace("{PREFILL}", expectedPrefill);
 
-      // Anthropic payload
+      // Build the payload for Anthropic.
       const maxTokens = batch * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
         model: config.MODEL_NAME,
@@ -177,41 +180,40 @@
 
       document.getElementById("rawOutput").innerText = "Generating prompts...";
       document.getElementById("finalOutput").innerText = "";
-
+      
       try {
-        // Call Anthropic via the proxy
+        // Call the Anthropic proxy.
         const response = await fetch(config.VERCEL_PROXY_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-
+        
         const data = await response.json();
         if(debug) {
           document.getElementById("debugOutput").innerText += "Full API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
         }
-
+        
         if (!data.content) {
           throw new Error("No content in response");
         }
-
+        
         let rawText = "";
         if (Array.isArray(data.content)) {
           rawText = data.content.map(item => item.text).join("\n\n");
         } else {
           rawText = data.content;
         }
-
+        
         document.getElementById("rawOutput").innerText = rawText;
-
-        // Force prefill naming & append any parameters
+        
+        // Format the final output.
         const numbered = forcePrefillNaming(rawText, surah, verse, batch);
         const finalText = appendParameters(numbered, config.APPEND_PARAMS);
         document.getElementById("finalOutput").innerText = finalText;
-
-        // ! Now, send the final prompt to Stable Diffusion, not Midjourney !
+        
+        // ! Now, send the final prompts to Stable Diffusion !
         await sendToStableDiffusion(finalText);
-
       } catch (error) {
         console.error("Error:", error);
         document.getElementById("rawOutput").innerText = "Error generating prompts.";
