@@ -103,7 +103,7 @@
     // ! This function calls our new stablediffusion.js endpoint !
     async function sendToStableDiffusion(finalText) {
       // ! Replace <YOUR-VERCEL-APP> with your actual domain if needed !
-      const sdEndpoint = "https://<YOUR-VERCEL-APP>.vercel.app/api/stablediffusion"; // ! edit if your domain is different !
+      const sdEndpoint = "https://visual-quran-git-main-halalbelels-projects.vercel.app/api/stablediffusion"; // ! edit if your domain is different !
 
       const payload = { prompt: finalText };
       let response = await fetch(sdEndpoint, {
