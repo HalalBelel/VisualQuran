@@ -43,7 +43,7 @@
     form {
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 10px; /* Reduced gap for mobile usability */
       justify-content: space-around;
       margin-bottom: 20px;
     }
@@ -59,7 +59,8 @@
       font-weight: bold;
     }
     
-    input[type="number"] {
+    input[type="number"],
+    select {
       width: 100%;
       padding: 8px;
       border: 1px solid #ccc;
@@ -115,9 +116,26 @@
       border: 1px solid #ccc;
     }
     
+    /* On mobile, show the dropdowns and hide the number inputs for surah and batch */
     @media (max-width: 600px) {
+      #surahNumberWrapper,
+      #batchNumberWrapper {
+        display: none;
+      }
+      #surahSelectWrapper,
+      #batchSelectWrapper {
+        display: block;
+      }
       form {
         flex-direction: column;
+      }
+    }
+    
+    /* On non-mobile, hide the select dropdowns for surah and batch */
+    @media (min-width: 601px) {
+      #surahSelectWrapper,
+      #batchSelectWrapper {
+        display: none;
       }
     }
   </style>
@@ -128,17 +146,33 @@
     <p>Enter the verse details below. (Anthropic API key is handled by the Vercel proxy.)</p>
     
     <form id="promptForm">
-      <div>
-        <label for="surah">Starting Surah Number (1-114):</label>
-        <input type="number" id="surah" min="1" max="114" required />
+      <!-- Desktop Surah input -->
+      <div id="surahNumberWrapper">
+        <label for="surahNumber">Starting Surah Number (1-114):</label>
+        <input type="number" id="surahNumber" min="1" max="114" required />
+      </div>
+      <!-- Mobile Surah dropdown -->
+      <div id="surahSelectWrapper">
+        <label for="surahSelect">Select Surah:</label>
+        <select id="surahSelect"></select>
       </div>
       <div>
         <label for="verse">Starting Verse Number (>=1):</label>
         <input type="number" id="verse" min="1" required />
       </div>
-      <div>
+      <!-- Desktop Batch input -->
+      <div id="batchNumberWrapper">
         <label for="batch">Number of Consecutive Verses (1-3):</label>
         <input type="number" id="batch" min="1" max="3" required />
+      </div>
+      <!-- Mobile Batch dropdown -->
+      <div id="batchSelectWrapper">
+        <label for="batchSelect">Number of Consecutive Verses:</label>
+        <select id="batchSelect">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+        </select>
       </div>
       <div style="flex-basis: 100%; text-align: center;">
         <button type="submit">Generate Prompts</button>
@@ -215,6 +249,58 @@
         alert("Failed to load configuration (a.json).");
       });
     
+    // Global variable to hold surah data.
+    let surahData = [];
+    
+    // Fetch surahnames.json and populate the surah select, and store the data.
+    fetch("surahnames.json")
+      .then(response => response.json())
+      .then(data => {
+        surahData = data;
+        const surahSelect = document.getElementById("surahSelect");
+        data.forEach(item => {
+          const option = document.createElement("option");
+          option.value = item["Surah Number"];
+          option.text = item["Surah Number"] + " - " + item["Surah Name"];
+          option.dataset.verses = item["Surah Verses"];
+          surahSelect.appendChild(option);
+        });
+        // If no surah was previously selected, set the verse max using the first option.
+        updateVerseMax(parseInt(surahSelect.value));
+      })
+      .catch(err => {
+        console.error("Error loading surah names:", err);
+        if(debug) {
+          document.getElementById("debugOutput").innerText += "Error loading surahnames.json:\n" + err.toString() + "\n";
+        }
+      });
+    
+    // Update the max attribute of the verse input based on the selected surah's verses.
+    function updateVerseMax(surahNumber) {
+      // Find the surah in the surahData.
+      const surahItem = surahData.find(item => item["Surah Number"] === surahNumber);
+      if (surahItem) {
+        const maxVerse = surahItem["Surah Verses"];
+        document.getElementById("verse").max = maxVerse;
+        if(debug) {
+          document.getElementById("debugOutput").innerText += "Updated verse max to " + maxVerse + " for surah " + surahNumber + "\n";
+        }
+      }
+    }
+    
+    // Add event listeners to update verse max when surah changes.
+    // For mobile dropdown.
+    document.getElementById("surahSelect").addEventListener("change", function() {
+      const surahNum = parseInt(this.value);
+      updateVerseMax(surahNum);
+    });
+    
+    // For desktop number input.
+    document.getElementById("surahNumber").addEventListener("change", function() {
+      const surahNum = parseInt(this.value);
+      updateVerseMax(surahNum);
+    });
+    
     // This function calls our stablediffusion endpoint.
     async function sendToStableDiffusion(finalText) {
       // Split the final text into individual prompt lines (ignoring empty lines)
@@ -247,12 +333,27 @@
     // Form submission handler.
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
-      const surah = parseInt(document.getElementById("surah").value);
+      
+      // Decide which surah value to use based on screen size.
+      let surah;
+      if (window.innerWidth <= 600) {
+        surah = parseInt(document.getElementById("surahSelect").value);
+      } else {
+        surah = parseInt(document.getElementById("surahNumber").value);
+      }
+      
       const verse = parseInt(document.getElementById("verse").value);
-      const batch = parseInt(document.getElementById("batch").value);
+      let batch;
+      if (window.innerWidth <= 600) {
+        batch = parseInt(document.getElementById("batchSelect").value);
+      } else {
+        batch = parseInt(document.getElementById("batch").value);
+      }
     
+      // Check against the surah verse max if available.
+      const verseMax = parseInt(document.getElementById("verse").max) || Infinity;
       if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
-          surah < 1 || surah > 114 || verse < 1 || batch < 1 || batch > 3) {
+          surah < 1 || surah > 114 || verse < 1 || verse > verseMax || batch < 1 || batch > 3) {
         alert("Please enter valid inputs.");
         return;
       }
