@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
   try {
     // ! You can change the engineId if you want a different model, e.g. "stable-diffusion-xl-beta-v2-2-2" !
-    const engineId = "stable-diffusion-v1-5";
+    const engineId = "stable-diffusion-xl-1024-v1-0";
 
     // POST request to Stability AI's text-to-image endpoint
     const response = await fetch(
