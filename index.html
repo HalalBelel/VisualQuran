@@ -2,61 +2,171 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quranic Verse Stable Diffusion Prompt Generator</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    input, button, textarea { margin: 5px 0; font-size: 1rem; }
-    textarea { width: 100%; height: 200px; }
-    .output { white-space: pre-wrap; background: #f7f7f7; padding: 10px; border: 1px solid #ccc; }
-    .debug { font-family: monospace; color: #555; margin-top: 20px; }
-    .version { margin-top: 20px; font-size: 0.9rem; color: #777; }
-    img { max-width: 100%; margin: 10px 0; }
+    /* Reset some basic elements */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      color: #333;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #2c3e50;
+    }
+    
+    p {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+    
+    form > div {
+      flex: 1 1 200px;
+      min-width: 200px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border: none;
+      background: #3498db;
+      color: #fff;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin: auto;
+    }
+    
+    button:hover {
+      background: #2980b9;
+    }
+    
+    .output, .debug, .version {
+      background: #f7f7f7;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      overflow-wrap: break-word;
+    }
+    
+    .output {
+      white-space: pre-wrap;
+      font-family: "Courier New", Courier, monospace;
+    }
+    
+    .image-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .image-gallery img {
+      width: 100%;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    
+    @media (max-width: 600px) {
+      form {
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Quranic Verse Stable Diffusion Prompt Generator</h1>
-  <p>Enter the verse details below (Anthropic API key is handled by the Vercel proxy):</p>
-
-  <form id="promptForm">
-    <label for="surah">Starting Surah Number (1-114):</label><br>
-    <input type="number" id="surah" min="1" max="114" required /><br>
-
-    <label for="verse">Starting Verse Number (>=1):</label><br>
-    <input type="number" id="verse" min="1" required /><br>
-
-    <label for="batch">Number of Consecutive Verses (1-7000):</label><br>
-    <input type="number" id="batch" min="1" max="7000" required /><br>
-
-    <button type="submit">Generate Prompts</button>
-  </form>
-
-  <h2>Raw Output</h2>
-  <div id="rawOutput" class="output"></div>
-
-  <h2>Final Output</h2>
-  <div id="finalOutput" class="output"></div>
-
-  <h2>Generated Image (From Stable Diffusion)</h2>
-  <div id="imageOutput" class="output"></div>
-
-  <h2>Debug Information</h2>
-  <pre id="debugOutput" class="debug"></pre>
-
-  <div id="versionInfo" class="version"></div>
-
+  <div class="container">
+    <h1>Quranic Verse SD Prompt Generator</h1>
+    <p>Enter the verse details below. (Anthropic API key is handled by the Vercel proxy.)</p>
+    
+    <form id="promptForm">
+      <div>
+        <label for="surah">Starting Surah Number (1-114):</label>
+        <input type="number" id="surah" min="1" max="114" required />
+      </div>
+      <div>
+        <label for="verse">Starting Verse Number (>=1):</label>
+        <input type="number" id="verse" min="1" required />
+      </div>
+      <div>
+        <label for="batch">Number of Consecutive Verses (1-3):</label>
+        <input type="number" id="batch" min="1" max="3" required />
+      </div>
+      <div style="flex-basis: 100%; text-align: center;">
+        <button type="submit">Generate Prompts</button>
+      </div>
+    </form>
+    
+    <h2>Raw Output</h2>
+    <div id="rawOutput" class="output"></div>
+    
+    <h2>Final Output</h2>
+    <div id="finalOutput" class="output"></div>
+    
+    <h2>Generated Images (From Stable Diffusion)</h2>
+    <div id="imageOutput" class="image-gallery"></div>
+    
+    <h2>Debug Information</h2>
+    <pre id="debugOutput" class="debug"></pre>
+    
+    <div id="versionInfo" class="version"></div>
+  </div>
+  
   <script>
     // Set version using document.lastModified so it changes with each commit.
     const modifiedDate = new Date(document.lastModified);
     document.getElementById("versionInfo").textContent = "Version: " + modifiedDate.toLocaleString("en-AU");
-
+    
     // Debug flag (set to false to disable debug output)
     const debug = true;
-
+    
     // Utility function to pad numbers with leading zeros.
     function pad(num, size) {
       return num.toString().padStart(size, '0');
     }
-
+    
     // Splits the Anthropic text into paragraphs and forces each prompt to have a proper code.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
@@ -77,13 +187,13 @@
       }
       return corrected.join("\n");
     }
-
-    // Appends the Midjourney parameters (or your chosen parameters) to each prompt.
+    
+    // Appends the chosen parameters to each prompt.
     function appendParameters(text, params) {
       const lines = text.split("\n").filter(line => line.trim() !== "");
       return lines.map(line => line.trim() + " " + params).join("\n");
     }
-
+    
     // Load configuration from a.json.
     let config = {};
     fetch("a.json")
@@ -98,16 +208,14 @@
         console.error("Error loading configuration:", err);
         alert("Failed to load configuration (a.json).");
       });
-
-    // This function calls our new stablediffusion endpoint.
+    
+    // This function calls our stablediffusion endpoint.
     async function sendToStableDiffusion(finalText) {
-      // ! Replace <YOUR-VERCEL-APP> with your actual Vercel domain below !
-      const sdEndpoint = "https://visual-quran.vercel.app/api/stablediffusion"; 
-      
-      // Split the final text into individual prompts (one per line)
+      // Split the final text into individual prompt lines (ignoring empty lines)
       const prompts = finalText.split("\n").filter(line => line.trim() !== "");
+      const sdEndpoint = "https://visual-quran.vercel.app/api/stablediffusion";
       const payload = { prompts };
-
+    
       let response = await fetch(sdEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,49 +227,48 @@
         document.getElementById("debugOutput").innerText += "Stability Error:\n" + data.error + "\n\n";
         return;
       }
-
+    
       // data.images is an array of data URLs.
       const imageOutput = document.getElementById("imageOutput");
       imageOutput.innerHTML = "";
       data.images.forEach((imgUrl) => {
         const img = document.createElement("img");
         img.src = imgUrl;
-        img.style.maxWidth = "100%";
         imageOutput.appendChild(img);
       });
     }
-
+    
     // Form submission handler.
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const surah = parseInt(document.getElementById("surah").value);
       const verse = parseInt(document.getElementById("verse").value);
       const batch = parseInt(document.getElementById("batch").value);
-
+    
       if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
-          surah < 1 || surah > 114 || verse < 1 || batch < 1 || batch > 7000) {
+          surah < 1 || surah > 114 || verse < 1 || batch < 1 || batch > 3) {
         alert("Please enter valid inputs.");
         return;
       }
-
+    
       if (Object.keys(config).length === 0) {
         alert("Configuration not loaded. Please try again later.");
         return;
       }
-
+    
       // Compute the expected prefill from the configuration.
       const expectedPrefill = config.PREFILL_TEMPLATE
         .replace("{SURAH_PADDED}", pad(surah, 3))
         .replace("{VERSE_PADDED}", pad(verse, 3))
         .trim();
-
+    
       // Build the user instruction.
       let userInstruction = config.USER_INSTRUCTION_TEMPLATE
         .replace("{BATCH}", batch)
         .replace("{SURAH}", surah)
         .replace("{VERSE}", verse)
         .replace("{PREFILL}", expectedPrefill);
-
+    
       // Build the payload for Anthropic.
       const maxTokens = batch * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
@@ -173,11 +280,11 @@
           { role: "assistant", content: expectedPrefill }
         ]
       };
-
+    
       if(debug) {
         document.getElementById("debugOutput").innerText += "Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
       }
-
+    
       document.getElementById("rawOutput").innerText = "Generating prompts...";
       document.getElementById("finalOutput").innerText = "";
       
@@ -212,7 +319,7 @@
         const finalText = appendParameters(numbered, config.APPEND_PARAMS);
         document.getElementById("finalOutput").innerText = finalText;
         
-        // ! Now, send the final prompts to Stable Diffusion !
+        // Now, send the final prompts to Stable Diffusion.
         await sendToStableDiffusion(finalText);
       } catch (error) {
         console.error("Error:", error);
