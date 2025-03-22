@@ -306,12 +306,9 @@
     
     // Function to verify the prompt using review instructions only.
     async function verifyPrompt() {
-      let verificationMessages = [];
-      if (conversation.length > 0) {
-        verificationMessages = conversation.slice();
-      } else {
-        verificationMessages.push({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
-      }
+      // Remove any messages with role "system" from conversation
+      let verificationMessages = conversation.filter(m => m.role !== "system");
+      // Append the review instructions.
       verificationMessages.push({ 
         role: "user", 
         content: "Please review the appended prompt from our previous messages using the following instructions: Replace any word from FORBIDDEN_EVIL_WORDS with 'column of smoke', any word from FORBIDDEN_NEUTRAL_WORDS with an allowed term from ALLOWED_CATEGORIES, and any word from FORBIDDEN_SPIRITUAL_WORDS with 'beam of light'. Only output the modifications that need to be appended to the existing prompt to ensure compliance. If no modifications are necessary, output an empty response." 
@@ -321,7 +318,7 @@
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
-        system: config.VERIFICATION_SYSTEM_ROLE,
+        system: config.VERIFICATION_SYSTEM_ROLE, // top-level system prompt
         messages: verificationMessages
       };
       
@@ -412,7 +409,7 @@
         ]
       };
     
-      // Reset conversation context with the initial messages.
+      // Reset conversation context with initial messages.
       conversation = [
         { role: "system", content: config.SYSTEM_ROLE },
         { role: "user", content: userInstruction },
@@ -456,7 +453,7 @@
         const appendedPrompt = appendParameters(numbered, config.APPEND_PARAMS);
         document.getElementById("appendedOutput").innerText = appendedPrompt;
         
-        // Now call verification to get modifications (if any) based solely on review instructions.
+        // Call verification to get modifications (if any) based solely on review instructions.
         const modifications = await verifyPrompt();
         let finalVerifiedPrompt = appendedPrompt;
         if (modifications.trim() !== "") {
