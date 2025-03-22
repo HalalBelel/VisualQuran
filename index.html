@@ -71,13 +71,13 @@
   </div>
   
   <script>
-    // --- Function Definitions ---
-    // Pad number with leading zeros.
+    // --- Helper Functions ---
+    // Pad a number with leading zeros.
     function pad(num, size) {
       return num.toString().padStart(size, '0');
     }
     
-    // Numbering correction: Ensure each prompt starts with a proper code.
+    // Correct numbering: Ensure each prompt starts with the proper code.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
       let corrected = [];
@@ -104,26 +104,36 @@
       return lines.map(line => line.trim() + " " + params).join("\n");
     }
     
-    // Helper: Expand placeholders in configuration strings.
+    // Expand placeholders in a text using config arrays.
     function expandPlaceholders(text, config) {
       let result = text;
-      if(config.ALLOWED_CATEGORIES) {
+      if (config.ALLOWED_CATEGORIES) {
         result = result.replace("{ALLOWED_CATEGORIES}", config.ALLOWED_CATEGORIES.join(", "));
       }
-      if(config.FORBIDDEN_EVIL_WORDS) {
+      if (config.FORBIDDEN_EVIL_WORDS) {
         result = result.replace("{FORBIDDEN_EVIL_WORDS}", config.FORBIDDEN_EVIL_WORDS.join(", "));
       }
-      if(config.FORBIDDEN_NEUTRAL_WORDS) {
+      if (config.FORBIDDEN_NEUTRAL_WORDS) {
         result = result.replace("{FORBIDDEN_NEUTRAL_WORDS}", config.FORBIDDEN_NEUTRAL_WORDS.join(", "));
       }
-      if(config.FORBIDDEN_SPIRITUAL_WORDS) {
+      if (config.FORBIDDEN_SPIRITUAL_WORDS) {
         result = result.replace("{FORBIDDEN_SPIRITUAL_WORDS}", config.FORBIDDEN_SPIRITUAL_WORDS.join(", "));
       }
       return result;
     }
     
-    // Function to find and return a list of forbidden words found in the text.
-    function findForbiddenWords(text) {
+    // Check for forbidden words in the text.
+    function containsForbiddenWords(text) {
+      const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
+      for (let word of allForbidden) {
+        let regex = new RegExp("\\b" + word + "\\b", "i");
+        if (regex.test(text)) return true;
+      }
+      return false;
+    }
+    
+    // Get a list of forbidden words found in the text.
+    function getForbiddenWords(text) {
       const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
       let found = [];
       allForbidden.forEach(word => {
@@ -134,9 +144,9 @@
       });
       return found;
     }
-    // --- End Function Definitions ---
+    // --- End Helper Functions ---
     
-    // Version info.
+    // Version information.
     const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
     const modifiedDate = new Date(document.lastModified);
     const versionText = "Version: " + modifiedDate.toLocaleDateString("en-AU") + " " + modifiedDate.toLocaleTimeString("en-AU");
@@ -160,7 +170,7 @@
         config.USER_INSTRUCTION_TEMPLATE = expandPlaceholders(config.USER_INSTRUCTION_TEMPLATE, config);
         config.APPEND_PARAMS = expandPlaceholders(config.APPEND_PARAMS, config);
         config.REVIEW_INSTRUCTIONS = expandPlaceholders(config.REVIEW_INSTRUCTIONS, config);
-        if(debug) {
+        if (debug) {
           document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(config, null, 2) + "\n\n";
         }
       })
@@ -187,7 +197,7 @@
       })
       .catch(err => {
         console.error("Error loading surah names:", err);
-        if(debug) {
+        if (debug) {
           document.getElementById("debugOutput").innerText += "Error loading surahnames.json:\n" + err.toString() + "\n";
         }
       });
@@ -206,7 +216,7 @@
           verseSelect.appendChild(option);
         }
         verseSelect.value = "1";
-        if(debug) {
+        if (debug) {
           document.getElementById("debugOutput").innerText += "Updated verse dropdown to 1-" + maxVerse + " for surah " + surahNumber + "\n";
         }
       }
@@ -254,7 +264,7 @@
       // For debugging: create a copy that prepends the system message.
       let debugPayload = JSON.parse(JSON.stringify(payload));
       debugPayload.messages.unshift({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
-      if(debug) {
+      if (debug) {
         document.getElementById("debugOutput").innerText += "Verification Payload Sent (debug view with system in messages):\n" + JSON.stringify(debugPayload, null, 2) + "\n\n";
       }
       const response = await fetch(config.VERCEL_PROXY_URL, {
@@ -263,7 +273,7 @@
         body: JSON.stringify(payload)
       });
       const data = await response.json();
-      if(debug) {
+      if (debug) {
         document.getElementById("debugOutput").innerText += "Verification API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
       }
       if (!data.content) {
@@ -276,19 +286,6 @@
         reviewResponse = data.content;
       }
       return reviewResponse;
-    }
-    
-    // Check for forbidden words and return the list found.
-    function getForbiddenWords(text) {
-      const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
-      let found = [];
-      allForbidden.forEach(word => {
-        let regex = new RegExp("\\b" + word + "\\b", "i");
-        if (regex.test(text)) {
-          found.push(word);
-        }
-      });
-      return found;
     }
     
     // Form submission handler.
@@ -342,7 +339,7 @@
         { role: "assistant", content: expectedPrefill }
       ];
       
-      if(debug) {
+      if (debug) {
         document.getElementById("debugOutput").innerText += "Prompt Generation Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
       }
       
@@ -358,7 +355,7 @@
           body: JSON.stringify(payload)
         });
         const data = await response.json();
-        if(debug) {
+        if (debug) {
           document.getElementById("debugOutput").innerText += "Generation API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
         }
         if (!data.content) {
@@ -409,7 +406,7 @@
       } catch (error) {
         console.error("Error:", error);
         document.getElementById("rawOutput").innerText = "Error generating prompts.";
-        if(debug) {
+        if (debug) {
           document.getElementById("debugOutput").innerText += "Error Details:\n" + error.toString() + "\n";
         }
       }
