@@ -71,25 +71,40 @@
   </div>
   
   <script>
-    // Version info.
-    const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
-    const modifiedDate = new Date(document.lastModified);
-    const versionText = "Version: " + modifiedDate.toLocaleDateString("en-AU") + " " + modifiedDate.toLocaleTimeString("en-AU");
-    document.getElementById("versionInfo").textContent = versionText;
-    document.getElementById("updatesBox").textContent = AUTHOR_UPDATE + "\n" + versionText;
-    
-    // Debug flag.
-    const debug = true;
-    
-    // Global conversation array.
-    let conversation = [];
-    
-    // Utility: pad numbers.
+    // --- Function Definitions ---
+    // Function to pad numbers with leading zeros.
     function pad(num, size) {
       return num.toString().padStart(size, '0');
     }
     
-    // Helper: expand placeholders in a given text using config arrays.
+    // Function to correct numbering: Ensures each prompt starts with a proper code.
+    function forcePrefillNaming(text, startSurah, startVerse, batch) {
+      const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
+      let corrected = [];
+      for (let i = 0; i < batch; i++) {
+        const code = `${pad(startSurah, 3)}${pad(startVerse + i, 3)} - `;
+        let content = "";
+        if (i < paragraphs.length) {
+          let p = paragraphs[i].trim();
+          const index = p.indexOf(" - ");
+          if (index !== -1) {
+            content = p.substring(index + 3).trim();
+          } else {
+            content = p;
+          }
+        }
+        corrected.push(code + content);
+      }
+      return corrected.join("\n");
+    }
+    
+    // Function to append negative prompt parameters.
+    function appendParameters(text, params) {
+      const lines = text.split("\n").filter(line => line.trim() !== "");
+      return lines.map(line => line.trim() + " " + params).join("\n");
+    }
+    
+    // Helper: Expand placeholders in a given text using config arrays.
     function expandPlaceholders(text, config) {
       let result = text;
       if(config.ALLOWED_CATEGORIES) {
@@ -107,13 +122,28 @@
       return result;
     }
     
+    // --- End of Function Definitions ---
+    
+    // Version info.
+    const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
+    const modifiedDate = new Date(document.lastModified);
+    const versionText = "Version: " + modifiedDate.toLocaleDateString("en-AU") + " " + modifiedDate.toLocaleTimeString("en-AU");
+    document.getElementById("versionInfo").textContent = versionText;
+    document.getElementById("updatesBox").textContent = AUTHOR_UPDATE + "\n" + versionText;
+    
+    // Debug flag.
+    const debug = true;
+    
+    // Global conversation array.
+    let conversation = [];
+    
     // Load configuration from a.json.
     let config = {};
     fetch("a.json")
       .then(response => response.json())
       .then(data => {
         config = data;
-        // Expand placeholders in all relevant configuration fields.
+        // Expand placeholders in configuration fields.
         config.COMMON_SYSTEM_ROLE = expandPlaceholders(config.COMMON_SYSTEM_ROLE, config);
         config.USER_INSTRUCTION_TEMPLATE = expandPlaceholders(config.USER_INSTRUCTION_TEMPLATE, config);
         config.APPEND_PARAMS = expandPlaceholders(config.APPEND_PARAMS, config);
@@ -212,7 +242,7 @@
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
-        system: config.VERIFICATION_SYSTEM_ROLE, // Top-level system.
+        system: config.VERIFICATION_SYSTEM_ROLE,
         messages: verificationMessages
       };
       // For debugging: create a copy that prepends the system message.
