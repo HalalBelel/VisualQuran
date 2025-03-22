@@ -11,7 +11,6 @@
       margin: 0;
       padding: 0;
     }
-    
     body {
       font-family: Arial, sans-serif;
       background: #f0f4f8;
@@ -19,7 +18,6 @@
       padding: 20px;
       line-height: 1.6;
     }
-    
     .container {
       max-width: 960px;
       margin: 0 auto;
@@ -28,18 +26,15 @@
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    
     h1, h2 {
       text-align: center;
       margin-bottom: 10px;
       color: #2c3e50;
     }
-    
     p {
       text-align: center;
       margin-bottom: 20px;
     }
-    
     form {
       display: flex;
       flex-wrap: wrap;
@@ -47,25 +42,21 @@
       justify-content: space-around;
       margin-bottom: 20px;
     }
-    
     form > div {
       flex: 1 1 200px;
       min-width: 200px;
     }
-    
     label {
       display: block;
       margin-bottom: 5px;
       font-weight: bold;
     }
-    
     select {
       width: 100%;
       padding: 8px;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-    
     button {
       padding: 10px 20px;
       border: none;
@@ -77,11 +68,9 @@
       transition: background 0.3s;
       margin: auto;
     }
-    
     button:hover {
       background: #2980b9;
     }
-    
     .output, .debug, .version {
       background: #f7f7f7;
       padding: 15px;
@@ -90,24 +79,20 @@
       margin-bottom: 20px;
       overflow: auto;
     }
-    
     .output {
       max-height: 300px;
       white-space: pre-wrap;
       font-family: "Courier New", Courier, monospace;
     }
-    
     .debug {
       max-height: 300px;
     }
-    
     .image-gallery {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 15px;
       margin-bottom: 20px;
     }
-    
     .image-gallery img {
       width: 100%;
       border-radius: 4px;
@@ -304,14 +289,14 @@
       });
     }
     
-    // Function to verify the prompt using review instructions only.
+    // Function to verify the prompt using review instructions from a.json.
     async function verifyPrompt() {
       // Remove any messages with role "system" from conversation.
       let verificationMessages = conversation.filter(m => m.role !== "system");
-      // Append the review instructions.
+      // Append the review instructions obtained from a.json.
       verificationMessages.push({ 
         role: "user", 
-        content: "Please review the appended prompt from our previous messages using the following instructions: Replace any word from FORBIDDEN_EVIL_WORDS with 'column of smoke', any word from FORBIDDEN_NEUTRAL_WORDS with an allowed term from ALLOWED_CATEGORIES, and any word from FORBIDDEN_SPIRITUAL_WORDS with 'beam of light'. Only output the modifications that need to be appended to the existing prompt to ensure compliance. If no modifications are necessary, output an empty response." 
+        content: config.REVIEW_INSTRUCTIONS 
       });
       
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
@@ -322,9 +307,9 @@
         messages: verificationMessages
       };
       
-      // For debugging, create a copy that includes the system message in the array.
+      // For debugging, create a copy that prepends the system message into the messages array.
       let debugPayload = JSON.parse(JSON.stringify(payload));
-      debugPayload.messages.push({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
+      debugPayload.messages.unshift({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
       
       if(debug) {
         document.getElementById("debugOutput").innerText += "Verification Payload Sent (debug view with system in messages):\n" + JSON.stringify(debugPayload, null, 2) + "\n\n";
@@ -457,7 +442,7 @@
         const appendedPrompt = appendParameters(numbered, config.APPEND_PARAMS);
         document.getElementById("appendedOutput").innerText = appendedPrompt;
         
-        // Call verification to get modifications (if any) based solely on review instructions.
+        // Call verification to get modifications (if any) based solely on review instructions from a.json.
         const modifications = await verifyPrompt();
         let finalVerifiedPrompt = appendedPrompt;
         if (modifications.trim() !== "") {
