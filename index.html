@@ -74,12 +74,10 @@
   
   <script>
     // --- Helper Functions ---
-    // Pad a number with leading zeros.
     function pad(num, size) {
       return num.toString().padStart(size, '0');
     }
     
-    // Numbering correction: Uses a custom delimiter " ||| " to avoid conflicts with natural hyphens.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const delimiter = " ||| ";
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
@@ -101,13 +99,11 @@
       return corrected.join("\n");
     }
     
-    // Append negative prompt parameters.
     function appendParameters(text, params) {
       const lines = text.split("\n").filter(line => line.trim() !== "");
       return lines.map(line => line.trim() + " " + params).join("\n");
     }
     
-    // Expand placeholders in configuration strings.
     function expandPlaceholders(text, config) {
       let result = text;
       if (config.ALLOWED_CATEGORIES) {
@@ -125,7 +121,6 @@
       return result;
     }
     
-    // Check for forbidden words in text.
     function containsForbiddenWords(text) {
       const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
       for (let word of allForbidden) {
@@ -135,7 +130,6 @@
       return false;
     }
     
-    // Return list of forbidden words found in text.
     function getForbiddenWords(text) {
       const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
       let found = [];
@@ -157,10 +151,7 @@
     document.getElementById("updatesBox").textContent = AUTHOR_UPDATE + "\n" + versionText;
     // --- End Version Info ---
     
-    // Debug flag.
     const debug = true;
-    
-    // Global conversation array.
     let conversation = [];
     
     // --- Load Configuration ---
@@ -169,7 +160,6 @@
       .then(response => response.json())
       .then(data => {
         config = data;
-        // Expand placeholders in configuration fields.
         config.COMMON_SYSTEM_ROLE = expandPlaceholders(config.COMMON_SYSTEM_ROLE, config);
         config.USER_INSTRUCTION_TEMPLATE = expandPlaceholders(config.USER_INSTRUCTION_TEMPLATE, config);
         config.APPEND_PARAMS = expandPlaceholders(config.APPEND_PARAMS, config);
@@ -208,7 +198,6 @@
       });
     // --- End Load Surah Data ---
     
-    // --- Update Verse Dropdown ---
     function updateVerseDropdown(surahNumber) {
       const surahItem = surahData.find(item => item["Surah Number"] === surahNumber);
       const verseSelect = document.getElementById("verseSelect");
@@ -260,20 +249,19 @@
     // --- End Send Prompt ---
     
     // --- Verify Prompt ---
-    async function verifyPrompt() {
-      // Send only the review instructions.
+    async function verifyPrompt(rawText) {
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
-        system: config.VERIFICATION_SYSTEM_ROLE,
-        messages: [{ role: "user", content: config.REVIEW_INSTRUCTIONS }]
+        system: config.SYSTEM_ROLE,
+        messages: [
+          { role: "assistant", content: rawText },
+          { role: "user", content: config.REVIEW_INSTRUCTIONS }
+        ]
       };
-      // For debugging: create a copy that prepends the system message.
-      let debugPayload = JSON.parse(JSON.stringify(payload));
-      debugPayload.messages.unshift({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
       if (debug) {
-        document.getElementById("debugOutput").innerText += "Verification Payload Sent (debug view with system in messages):\n" + JSON.stringify(debugPayload, null, 2) + "\n\n";
+        document.getElementById("debugOutput").innerText += "Verification Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
       }
       const response = await fetch(config.VERCEL_PROXY_URL, {
         method: "POST",
@@ -297,7 +285,6 @@
     }
     // --- End Verify Prompt ---
     
-    // --- Form Submission Handler ---
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       
@@ -327,11 +314,9 @@
         .replace("{VERSE}", verse)
         .replace("{PREFILL}", expectedPrefill);
       
-      // Prepend the common system role to the instruction.
       let newUserInstruction = config.COMMON_SYSTEM_ROLE + "\n" + userInstruction;
       
       const maxTokens = batch * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
-      // Send the system prompt only as a top-level field and include just the user message.
       const generationPayload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
@@ -341,7 +326,6 @@
         ]
       };
       
-      // Reset conversation with the initial message.
       conversation = [
         { role: "system", content: config.SYSTEM_ROLE },
         { role: "user", content: newUserInstruction }
@@ -356,7 +340,6 @@
       document.getElementById("verifiedOutput").innerText = "";
       
       try {
-        // Generate raw prompt.
         const genRes = await fetch(config.VERCEL_PROXY_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -374,17 +357,11 @@
           : genData.content;
         document.getElementById("rawOutput").innerText = rawText;
         
-        // Add rawText to conversation.
         conversation.push({ role: "assistant", content: rawText });
         
-        // Call review.
-        const reviewResponse = await verifyPrompt();
+        const reviewResponse = await verifyPrompt(rawText);
         document.getElementById("reviewedOutput").innerText = reviewResponse;
         
-        // Determine final text:
-        // If review response is "Review Passed" or "No Previous Prompts Found", use rawText;
-        // if review response is "Connection Error: Please regenerate prompt", display that and exit;
-        // Otherwise, if review response is non-empty, use it; else fallback to rawText.
         let finalReviewedText;
         const trimmedReview = reviewResponse.trim();
         if (trimmedReview === "Review Passed" || trimmedReview === "No Previous Prompts Found") {
@@ -398,20 +375,15 @@
           finalReviewedText = rawText;
         }
         
-        // Do numbering correction and build the final positive prompt.
         const finalNumbered = forcePrefillNaming(finalReviewedText, surah, verse, batch);
-        
-        // Build the negative prompt string from config.
         const negativePromptString = [].concat(
           config.FORBIDDEN_EVIL_WORDS,
           config.FORBIDDEN_NEUTRAL_WORDS,
           config.FORBIDDEN_SPIRITUAL_WORDS
         ).join(", ");
         
-        // Display the final positive prompt in the Verified Output box.
         document.getElementById("verifiedOutput").innerText = finalNumbered;
         
-        // Check for forbidden words in the final positive prompt.
         if (containsForbiddenWords(finalNumbered)) {
           const found = getForbiddenWords(finalNumbered);
           document.getElementById("verifiedOutput").innerText =
@@ -419,7 +391,6 @@
           return;
         }
         
-        // Finally, send the final positive prompt and the negative prompt separately.
         await sendToStableDiffusion(finalNumbered, negativePromptString);
       } catch (error) {
         console.error("Error:", error);
@@ -433,7 +404,6 @@
         }
       }
     });
-    // --- End Form Submission Handler ---
   </script>
 </body>
 </html>
