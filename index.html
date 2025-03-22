@@ -79,7 +79,7 @@
       return num.toString().padStart(size, '0');
     }
     
-    // Numbering correction: Ensures each prompt starts with a proper code.
+    // Numbering correction: ensures each prompt starts with the proper code.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
       let corrected = [];
@@ -106,7 +106,7 @@
       return lines.map(line => line.trim() + " " + params).join("\n");
     }
     
-    // Expand placeholders in configuration strings.
+    // Expand placeholders in a text using config arrays.
     function expandPlaceholders(text, config) {
       let result = text;
       if (config.ALLOWED_CATEGORIES) {
@@ -207,7 +207,7 @@
       });
     // --- End Load Surah Data ---
     
-    // Update verse dropdown.
+    // --- Update Verse Dropdown ---
     function updateVerseDropdown(surahNumber) {
       const surahItem = surahData.find(item => item["Surah Number"] === surahNumber);
       const verseSelect = document.getElementById("verseSelect");
@@ -268,7 +268,7 @@
         system: config.VERIFICATION_SYSTEM_ROLE,
         messages: [{ role: "user", content: config.REVIEW_INSTRUCTIONS }]
       };
-      // Debug payload: add system message in messages.
+      // For debugging: create a copy that prepends the system message.
       let debugPayload = JSON.parse(JSON.stringify(payload));
       debugPayload.messages.unshift({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
       if (debug) {
@@ -386,12 +386,17 @@
         document.getElementById("reviewedOutput").innerText = reviewResponse;
         
         // Determine final text:
-        // If reviewResponse trimmed equals "Review Passed", use rawText;
+        // If reviewResponse trimmed equals "Review Passed" or "No Previous Prompts Found", use rawText.
+        // If reviewResponse equals "Connection Error: Please regenerate prompt", show that message and exit.
         // Otherwise, if reviewResponse is non-empty, use it; else fallback to rawText.
         let finalReviewedText;
-        if (reviewResponse.trim() === "Review Passed") {
+        const trimmedReview = reviewResponse.trim();
+        if (trimmedReview === "Review Passed" || trimmedReview === "No Previous Prompts Found") {
           finalReviewedText = rawText;
-        } else if (reviewResponse.trim() !== "") {
+        } else if (trimmedReview === "Connection Error: Please regenerate prompt") {
+          document.getElementById("verifiedOutput").innerText = "Connection Error: Please regenerate prompt";
+          return;
+        } else if (trimmedReview !== "") {
           finalReviewedText = reviewResponse;
         } else {
           finalReviewedText = rawText;
@@ -403,7 +408,7 @@
         // Show final prompt in Verified Output box.
         document.getElementById("verifiedOutput").innerText = finalPrompt;
         
-        // Check for forbidden words in the generated prompt part (excluding negative prompts).
+        // Check for forbidden words in the generated prompt (excluding negative prompts).
         if (containsForbiddenWords(finalNumbered)) {
           const forbiddenList = getForbiddenWords(finalNumbered);
           document.getElementById("verifiedOutput").innerText = "Sorry forbidden words (" + forbiddenList.join(", ") + ") were found, please click generate prompt again and report to info@onewordquran.com";
@@ -413,7 +418,12 @@
         await sendToStableDiffusion(finalPrompt);
       } catch (error) {
         console.error("Error:", error);
-        document.getElementById("rawOutput").innerText = "Error generating prompts.";
+        // If error message contains connection error, display a specific message.
+        if (error.toString().toLowerCase().includes("connection")) {
+          document.getElementById("rawOutput").innerText = "Connection Error: Please regenerate prompt";
+        } else {
+          document.getElementById("rawOutput").innerText = "Error generating prompts.";
+        }
         if (debug) {
           document.getElementById("debugOutput").innerText += "Error Details:\n" + error.toString() + "\n";
         }
