@@ -72,12 +72,12 @@
   
   <script>
     // --- Function Definitions ---
-    // Function to pad numbers with leading zeros.
+    // Pad number with leading zeros.
     function pad(num, size) {
       return num.toString().padStart(size, '0');
     }
     
-    // Function to correct numbering: Ensures each prompt starts with a proper code.
+    // Numbering correction: Ensure each prompt starts with a proper code.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
       let corrected = [];
@@ -98,13 +98,13 @@
       return corrected.join("\n");
     }
     
-    // Function to append negative prompt parameters.
+    // Append negative prompt parameters.
     function appendParameters(text, params) {
       const lines = text.split("\n").filter(line => line.trim() !== "");
       return lines.map(line => line.trim() + " " + params).join("\n");
     }
     
-    // Helper: Expand placeholders in a given text using config arrays.
+    // Helper: Expand placeholders in configuration strings.
     function expandPlaceholders(text, config) {
       let result = text;
       if(config.ALLOWED_CATEGORIES) {
@@ -121,8 +121,7 @@
       }
       return result;
     }
-    
-    // --- End of Function Definitions ---
+    // --- End Function Definitions ---
     
     // Version info.
     const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
@@ -229,21 +228,15 @@
       });
     }
     
-    // Verify the raw output using review instructions from a.json.
+    // Verify the raw output using only the review instructions from a.json.
     async function verifyPrompt() {
-      // Use conversation (excluding system messages) for review.
-      let verificationMessages = conversation.filter(m => m.role !== "system");
-      // Append review instructions from a.json.
-      verificationMessages.push({ 
-        role: "user", 
-        content: config.REVIEW_INSTRUCTIONS 
-      });
+      // Send only the review instructions.
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
         system: config.VERIFICATION_SYSTEM_ROLE,
-        messages: verificationMessages
+        messages: [{ role: "user", content: config.REVIEW_INSTRUCTIONS }]
       };
       // For debugging: create a copy that prepends the system message.
       let debugPayload = JSON.parse(JSON.stringify(payload));
@@ -269,7 +262,6 @@
       } else {
         reviewResponse = data.content;
       }
-      conversation.push({ role: "assistant", content: reviewResponse });
       return reviewResponse;
     }
     
