@@ -8,7 +8,7 @@
   "MAX_TOKENS_MULTIPLIER": 100,
   "MAX_TOKENS_OVERHEAD": 100,
   "VERCEL_PROXY_URL": "https://visual-quran-git-main-halalbelels-projects.vercel.app/api/proxy",
-  "REVIEW_INSTRUCTIONS": "Please review the prompts from our previous messages using the following instructions: Ensuring the prompts still make sense, replace any word from FORBIDDEN_EVIL_WORDS with 'column of smoke', any word from FORBIDDEN_NEUTRAL_WORDS with an allowed term from ALLOWED_CATEGORIES, and any word from FORBIDDEN_SPIRITUAL_WORDS with 'beam of light'. Only output the modified prompt if changes are nessesary, otherwise output an empty response.",
+  "REVIEW_INSTRUCTIONS": "Please review the prompts from our previous messages using the following instructions: Ensuring the prompts still make sense, replace any word from FORBIDDEN_EVIL_WORDS with 'column of smoke', any word from FORBIDDEN_NEUTRAL_WORDS with an allowed term from ALLOWED_CATEGORIES, and any word from FORBIDDEN_SPIRITUAL_WORDS with 'beam of light'. Only output the modified prompt if changes are nessesary, otherwise output the exact phrase: Review Passed",
   "FORBIDDEN_EVIL_WORDS": [
     "devils",
     "demons",
