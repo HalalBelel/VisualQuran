@@ -17,7 +17,9 @@
     select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
     button { padding: 10px 20px; border: none; background: #3498db; color: #fff; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s; margin: auto; }
     button:hover { background: #2980b9; }
-    .output, .debug, .version { background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto; }
+    .output, .debug, .version {
+      background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto;
+    }
     .output { max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace; }
     .debug { max-height: 300px; }
     .image-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
@@ -30,14 +32,17 @@
     <p>Enter the verse details below. (Anthropic API key is handled by the Vercel proxy.)</p>
     
     <form id="promptForm">
+      <!-- Surah dropdown -->
       <div id="surahSelectWrapper">
         <label for="surahSelect">Select Surah:</label>
         <select id="surahSelect"></select>
       </div>
+      <!-- Verse/Ayah dropdown -->
       <div id="verseSelectWrapper">
         <label for="verseSelect">Select Ayah:</label>
         <select id="verseSelect"></select>
       </div>
+      <!-- Batch dropdown -->
       <div id="batchSelectWrapper">
         <label for="batchSelect">Select Consecutive Verses:</label>
         <select id="batchSelect">
@@ -54,11 +59,8 @@
     <h2>Raw Output</h2>
     <div id="rawOutput" class="output"></div>
     
-    <h2>Appended Output</h2>
-    <div id="appendedOutput" class="output"></div>
-    
-    <h2>Verified Output</h2>
-    <div id="verifiedOutput" class="output"></div>
+    <h2>Reviewed Output</h2>
+    <div id="reviewedOutput" class="output"></div>
     
     <h2>Generated Images (From Stable Diffusion)</h2>
     <div id="imageOutput" class="image-gallery"></div>
@@ -71,7 +73,7 @@
   </div>
   
   <script>
-    // Version info.
+    // Version stamp.
     const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
     const modifiedDate = new Date(document.lastModified);
     const versionText = "Version: " + modifiedDate.toLocaleDateString("en-AU") + " " + modifiedDate.toLocaleTimeString("en-AU");
@@ -116,7 +118,7 @@
       return lines.map(line => line.trim() + " " + params).join("\n");
     }
     
-    // Load configuration.
+    // Load configuration from a.json.
     let config = {};
     fetch("a.json")
       .then(response => response.json())
@@ -205,9 +207,9 @@
     
     // Verify the raw output using review instructions from a.json.
     async function verifyPrompt() {
-      // Use conversation excluding any system messages.
+      // Use conversation (excluding any system messages) for review.
       let verificationMessages = conversation.filter(m => m.role !== "system");
-      // Append review instructions (from a.json).
+      // Append review instructions from a.json.
       verificationMessages.push({ 
         role: "user", 
         content: config.REVIEW_INSTRUCTIONS 
@@ -237,14 +239,14 @@
       if (!data.content) {
         throw new Error("No content in verification response");
       }
-      let modifications = "";
+      let reviewResponse = "";
       if (Array.isArray(data.content)) {
-        modifications = data.content.map(item => item.text).join("\n\n");
+        reviewResponse = data.content.map(item => item.text).join("\n\n");
       } else {
-        modifications = data.content;
+        reviewResponse = data.content;
       }
-      conversation.push({ role: "assistant", content: modifications });
-      return modifications;
+      conversation.push({ role: "assistant", content: reviewResponse });
+      return reviewResponse;
     }
     
     // Check for forbidden words.
@@ -310,10 +312,10 @@
       }
       
       document.getElementById("rawOutput").innerText = "Generating prompts...";
-      document.getElementById("appendedOutput").innerText = "";
-      document.getElementById("verifiedOutput").innerText = "";
+      document.getElementById("reviewedOutput").innerText = "";
       
       try {
+        // Generate raw prompt.
         const response = await fetch(config.VERCEL_PROXY_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -333,25 +335,40 @@
           rawText = data.content;
         }
         document.getElementById("rawOutput").innerText = rawText;
+        
         // Add rawText to conversation.
         conversation.push({ role: "assistant", content: rawText });
         
-        // Call verification on the raw output.
-        const modifications = await verifyPrompt();
-        let reviewedText = rawText;
-        if (modifications.trim() !== "") {
-          reviewedText = modifications;
-        }
-        // Now do numbering correction and append negative prompts.
-        const finalNumbered = forcePrefillNaming(reviewedText, surah, verse, batch);
-        const finalVerifiedPrompt = appendParameters(finalNumbered, config.APPEND_PARAMS);
-        document.getElementById("verifiedOutput").innerText = finalVerifiedPrompt;
+        // Call review.
+        const reviewResponse = await verifyPrompt();
+        // Show the review response in the Reviewed Output box.
+        document.getElementById("reviewedOutput").innerText = reviewResponse;
         
-        if (containsForbiddenWords(finalVerifiedPrompt)) {
-          document.getElementById("verifiedOutput").innerText = "Sorry forbidden words found, please click generate prompt again and report to info@onewordquran.com";
+        // Determine final text to use:
+        // If the review response (trimmed) equals "Review Passed", use the raw output.
+        // Otherwise, if review response is non-empty, use the review response.
+        // If review response is empty, fallback to raw output.
+        let finalReviewedText;
+        if (reviewResponse.trim() === "Review Passed") {
+          finalReviewedText = rawText;
+        } else if (reviewResponse.trim() !== "") {
+          finalReviewedText = reviewResponse;
+        } else {
+          finalReviewedText = rawText;
+        }
+        
+        // Now do numbering correction and append negative prompts.
+        const finalNumbered = forcePrefillNaming(finalReviewedText, surah, verse, batch);
+        const finalPrompt = appendParameters(finalNumbered, config.APPEND_PARAMS);
+        // Update Reviewed Output box with final processed prompt.
+        document.getElementById("reviewedOutput").innerText = finalPrompt;
+        
+        if (containsForbiddenWords(finalPrompt)) {
+          document.getElementById("reviewedOutput").innerText = "Sorry forbidden words found, please click generate prompt again and report to info@onewordquran.com";
           return;
         }
-        await sendToStableDiffusion(finalVerifiedPrompt);
+        
+        await sendToStableDiffusion(finalPrompt);
       } catch (error) {
         console.error("Error:", error);
         document.getElementById("rawOutput").innerText = "Error generating prompts.";
