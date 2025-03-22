@@ -17,9 +17,7 @@
     select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
     button { padding: 10px 20px; border: none; background: #3498db; color: #fff; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s; margin: auto; }
     button:hover { background: #2980b9; }
-    .output, .debug, .version {
-      background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto;
-    }
+    .output, .debug, .version { background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto; }
     .output { max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace; }
     .debug { max-height: 300px; }
     .image-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
@@ -91,31 +89,22 @@
       return num.toString().padStart(size, '0');
     }
     
-    // Numbering correction: force each prompt to have a proper code.
-    function forcePrefillNaming(text, startSurah, startVerse, batch) {
-      const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
-      let corrected = [];
-      for (let i = 0; i < batch; i++) {
-        const code = `${pad(startSurah, 3)}${pad(startVerse + i, 3)} - `;
-        let content = "";
-        if (i < paragraphs.length) {
-          let p = paragraphs[i].trim();
-          const index = p.indexOf(" - ");
-          if (index !== -1) {
-            content = p.substring(index + 3).trim();
-          } else {
-            content = p;
-          }
-        }
-        corrected.push(code + content);
+    // Helper: expand placeholders in a given text using config arrays.
+    function expandPlaceholders(text, config) {
+      let result = text;
+      if(config.ALLOWED_CATEGORIES) {
+        result = result.replace("{ALLOWED_CATEGORIES}", config.ALLOWED_CATEGORIES.join(", "));
       }
-      return corrected.join("\n");
-    }
-    
-    // Append negative parameters.
-    function appendParameters(text, params) {
-      const lines = text.split("\n").filter(line => line.trim() !== "");
-      return lines.map(line => line.trim() + " " + params).join("\n");
+      if(config.FORBIDDEN_EVIL_WORDS) {
+        result = result.replace("{FORBIDDEN_EVIL_WORDS}", config.FORBIDDEN_EVIL_WORDS.join(", "));
+      }
+      if(config.FORBIDDEN_NEUTRAL_WORDS) {
+        result = result.replace("{FORBIDDEN_NEUTRAL_WORDS}", config.FORBIDDEN_NEUTRAL_WORDS.join(", "));
+      }
+      if(config.FORBIDDEN_SPIRITUAL_WORDS) {
+        result = result.replace("{FORBIDDEN_SPIRITUAL_WORDS}", config.FORBIDDEN_SPIRITUAL_WORDS.join(", "));
+      }
+      return result;
     }
     
     // Load configuration from a.json.
@@ -124,8 +113,13 @@
       .then(response => response.json())
       .then(data => {
         config = data;
+        // Expand placeholders in all relevant configuration fields.
+        config.COMMON_SYSTEM_ROLE = expandPlaceholders(config.COMMON_SYSTEM_ROLE, config);
+        config.USER_INSTRUCTION_TEMPLATE = expandPlaceholders(config.USER_INSTRUCTION_TEMPLATE, config);
+        config.APPEND_PARAMS = expandPlaceholders(config.APPEND_PARAMS, config);
+        config.REVIEW_INSTRUCTIONS = expandPlaceholders(config.REVIEW_INSTRUCTIONS, config);
         if(debug) {
-          document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(data, null, 2) + "\n\n";
+          document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(config, null, 2) + "\n\n";
         }
       })
       .catch(err => {
