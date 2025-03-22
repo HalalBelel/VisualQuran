@@ -3,33 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quranic Verse SD Prompt Generator</title>
+  <title>Quranic Verse Stable Diffusion Prompt Generator</title>
   <style>
-    /* Minimal styling for demonstration */
-    body { font-family: Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
-    .container { max-width: 960px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; }
-    h1, h2 { text-align: center; margin-bottom: 10px; }
+    /* Reset basic elements */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; color: #333; padding: 20px; line-height: 1.6; }
+    .container { max-width: 960px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1, h2 { text-align: center; margin-bottom: 10px; color: #2c3e50; }
+    p { text-align: center; margin-bottom: 20px; }
     form { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-around; margin-bottom: 20px; }
     form > div { flex: 1 1 200px; min-width: 200px; }
-    select, button { padding: 8px; border-radius: 4px; }
-    .output { background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; max-height: 300px; overflow: auto; white-space: pre-wrap; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 10px 20px; border: none; background: #3498db; color: #fff; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s; margin: auto; }
+    button:hover { background: #2980b9; }
+    .output, .debug, .version {
+      background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto;
+    }
+    .output { max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace; }
+    .debug { max-height: 300px; }
+    .image-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .image-gallery img { width: 100%; border-radius: 4px; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Quranic Verse SD Prompt Generator</h1>
-    <p>Enter the verse details below.</p>
+    <p>Enter the verse details below. (Anthropic API key is handled by the Vercel proxy.)</p>
     
     <form id="promptForm">
-      <div>
+      <div id="surahSelectWrapper">
         <label for="surahSelect">Select Surah:</label>
         <select id="surahSelect"></select>
       </div>
-      <div>
+      <div id="verseSelectWrapper">
         <label for="verseSelect">Select Ayah:</label>
         <select id="verseSelect"></select>
       </div>
-      <div>
+      <div id="batchSelectWrapper">
         <label for="batchSelect">Select Consecutive Verses:</label>
         <select id="batchSelect">
           <option value="1">1</option>
@@ -37,7 +48,7 @@
           <option value="3">3</option>
         </select>
       </div>
-      <div style="flex-basis:100%; text-align:center;">
+      <div style="flex-basis: 100%; text-align: center;">
         <button type="submit">Generate Prompts</button>
       </div>
     </form>
@@ -51,268 +62,378 @@
     <h2>Verified Output</h2>
     <div id="verifiedOutput" class="output"></div>
     
-    <h2>Generated Images</h2>
-    <div id="imageOutput"></div>
+    <h2>Generated Images (From Stable Diffusion)</h2>
+    <div id="imageOutput" class="image-gallery"></div>
     
-    <pre id="debugOutput"></pre>
+    <h2>Debug Information</h2>
+    <pre id="debugOutput" class="debug"></pre>
+    
+    <div id="versionInfo" class="version"></div>
+    <pre id="updatesBox" class="version"></pre>
   </div>
   
   <script>
-    // Simple helper to pad numbers
+    // --- Helper Functions ---
+    // Pad a number with leading zeros.
     function pad(num, size) {
       return num.toString().padStart(size, '0');
     }
-
-    // A custom delimiter for the prefill naming
-    const DELIMITER = " ||| ";
-
-    // A function to ensure each prompt line has the code + delimiter
+    
+    // Numbering correction: Uses a custom delimiter " ||| " to avoid conflicts with natural hyphens.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
+      const delimiter = " ||| ";
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
-      let results = [];
+      let corrected = [];
       for (let i = 0; i < batch; i++) {
-        const code = pad(startSurah, 3) + pad(startVerse + i, 3) + DELIMITER;
-        let content = (i < paragraphs.length) ? paragraphs[i].trim() : "";
-        // If content has the delimiter, remove that prefix
-        const idx = content.indexOf(DELIMITER);
-        if (idx !== -1) {
-          content = content.substring(idx + DELIMITER.length).trim();
+        const code = `${pad(startSurah, 3)}${pad(startVerse + i, 3)}${delimiter}`;
+        let content = "";
+        if (i < paragraphs.length) {
+          let p = paragraphs[i].trim();
+          const index = p.indexOf(delimiter);
+          if (index !== -1) {
+            content = p.substring(index + delimiter.length).trim();
+          } else {
+            content = p;
+          }
         }
-        results.push(code + content);
+        corrected.push(code + content);
       }
-      return results.join("\n");
+      return corrected.join("\n");
     }
-
-    // Global config loaded from a.json
-    let config = {};
-    // Global surah data loaded from surahnames.json
-    let surahData = [];
-
-    // For debugging
+    
+    // Append negative prompt parameters.
+    function appendParameters(text, params) {
+      const lines = text.split("\n").filter(line => line.trim() !== "");
+      return lines.map(line => line.trim() + " " + params).join("\n");
+    }
+    
+    // Expand placeholders in configuration strings.
+    function expandPlaceholders(text, config) {
+      let result = text;
+      if (config.ALLOWED_CATEGORIES) {
+        result = result.replace("{ALLOWED_CATEGORIES}", config.ALLOWED_CATEGORIES.join(", "));
+      }
+      if (config.FORBIDDEN_EVIL_WORDS) {
+        result = result.replace("{FORBIDDEN_EVIL_WORDS}", config.FORBIDDEN_EVIL_WORDS.join(", "));
+      }
+      if (config.FORBIDDEN_NEUTRAL_WORDS) {
+        result = result.replace("{FORBIDDEN_NEUTRAL_WORDS}", config.FORBIDDEN_NEUTRAL_WORDS.join(", "));
+      }
+      if (config.FORBIDDEN_SPIRITUAL_WORDS) {
+        result = result.replace("{FORBIDDEN_SPIRITUAL_WORDS}", config.FORBIDDEN_SPIRITUAL_WORDS.join(", "));
+      }
+      return result;
+    }
+    
+    // Check for forbidden words in text.
+    function containsForbiddenWords(text) {
+      const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
+      for (let word of allForbidden) {
+        let regex = new RegExp("\\b" + word + "\\b", "i");
+        if (regex.test(text)) return true;
+      }
+      return false;
+    }
+    
+    // Return list of forbidden words found in text.
+    function getForbiddenWords(text) {
+      const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
+      let found = [];
+      allForbidden.forEach(word => {
+        let regex = new RegExp("\\b" + word + "\\b", "i");
+        if (regex.test(text)) {
+          found.push(word);
+        }
+      });
+      return found;
+    }
+    // --- End Helper Functions ---
+    
+    // --- Version Info ---
+    const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
+    const modifiedDate = new Date(document.lastModified);
+    const versionText = "Version: " + modifiedDate.toLocaleDateString("en-AU") + " " + modifiedDate.toLocaleTimeString("en-AU");
+    document.getElementById("versionInfo").textContent = versionText;
+    document.getElementById("updatesBox").textContent = AUTHOR_UPDATE + "\n" + versionText;
+    // --- End Version Info ---
+    
+    // Debug flag.
     const debug = true;
-
-    // On load, fetch the config and surah data
+    
+    // Global conversation array.
+    let conversation = [];
+    
+    // --- Load Configuration ---
+    let config = {};
     fetch("a.json")
-      .then(r => r.json())
+      .then(response => response.json())
       .then(data => {
         config = data;
+        // Expand placeholders in configuration fields.
+        config.COMMON_SYSTEM_ROLE = expandPlaceholders(config.COMMON_SYSTEM_ROLE, config);
+        config.USER_INSTRUCTION_TEMPLATE = expandPlaceholders(config.USER_INSTRUCTION_TEMPLATE, config);
+        config.APPEND_PARAMS = expandPlaceholders(config.APPEND_PARAMS, config);
+        config.REVIEW_INSTRUCTIONS = expandPlaceholders(config.REVIEW_INSTRUCTIONS, config);
         if (debug) {
-          document.getElementById("debugOutput").textContent += "Loaded config:\n" + JSON.stringify(config, null, 2) + "\n";
+          document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(config, null, 2) + "\n\n";
         }
       })
       .catch(err => {
-        console.error("Failed to load config a.json:", err);
+        console.error("Error loading configuration:", err);
         alert("Failed to load configuration (a.json).");
       });
-
+    // --- End Load Configuration ---
+    
+    // --- Load Surah Data ---
+    let surahData = [];
     fetch("surahnames.json")
-      .then(r => r.json())
+      .then(response => response.json())
       .then(data => {
         surahData = data;
-        // Populate the surahSelect
         const surahSelect = document.getElementById("surahSelect");
         data.forEach(item => {
           const option = document.createElement("option");
           option.value = item["Surah Number"];
-          option.text = `${item["Surah Number"]} - ${item["Surah Name"]}`;
+          option.text = item["Surah Number"] + " - " + item["Surah Name"];
+          option.dataset.verses = item["Surah Verses"];
           surahSelect.appendChild(option);
         });
-        // Set up the verse dropdown for the first surah
         updateVerseDropdown(parseInt(surahSelect.value));
       })
       .catch(err => {
-        console.error("Failed to load surahnames.json:", err);
+        console.error("Error loading surah names:", err);
+        if (debug) {
+          document.getElementById("debugOutput").innerText += "Error loading surahnames.json:\n" + err.toString() + "\n";
+        }
       });
-
+    // --- End Load Surah Data ---
+    
+    // --- Update Verse Dropdown ---
     function updateVerseDropdown(surahNumber) {
-      const verseSelect = document.getElementById("verseSelect");
-      verseSelect.innerHTML = "";
       const surahItem = surahData.find(item => item["Surah Number"] === surahNumber);
-      if (!surahItem) return;
-      for (let i = 1; i <= surahItem["Surah Verses"]; i++) {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.text = i;
-        verseSelect.appendChild(opt);
+      const verseSelect = document.getElementById("verseSelect");
+      if (surahItem) {
+        const maxVerse = surahItem["Surah Verses"];
+        verseSelect.innerHTML = "";
+        for (let i = 1; i <= maxVerse; i++) {
+          const option = document.createElement("option");
+          option.value = i;
+          option.text = i;
+          verseSelect.appendChild(option);
+        }
+        verseSelect.value = "1";
+        if (debug) {
+          document.getElementById("debugOutput").innerText += "Updated verse dropdown to 1-" + maxVerse + " for surah " + surahNumber + "\n";
+        }
       }
     }
-
+    
     document.getElementById("surahSelect").addEventListener("change", function() {
       updateVerseDropdown(parseInt(this.value));
     });
-
-    // This function calls stablediffusion endpoint
-    async function sendToStableDiffusion(finalPrompt, negativePrompt) {
+    // --- End Update Verse Dropdown ---
+    
+    // --- Send Prompt to Stable Diffusion ---
+    async function sendToStableDiffusion(promptText, negativePrompt) {
+      const prompts = promptText.split("\n").filter(line => line.trim() !== "");
+      const sdEndpoint = "https://visual-quran.vercel.app/api/stablediffusion";
+      const payload = { prompts, negative_prompt: negativePrompt };
+      let response = await fetch(sdEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      let data = await response.json();
+      if (!data.success) {
+        console.error("Stability request failed:", data.error);
+        document.getElementById("debugOutput").innerText += "Stability Error:\n" + data.error + "\n\n";
+        return;
+      }
+      const imageOutput = document.getElementById("imageOutput");
+      imageOutput.innerHTML = "";
+      data.images.forEach((imgUrl) => {
+        const img = document.createElement("img");
+        img.src = imgUrl;
+        imageOutput.appendChild(img);
+      });
+    }
+    // --- End Send Prompt ---
+    
+    // --- Verify Prompt ---
+    async function verifyPrompt() {
+      // Send only the review instructions.
+      const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
-        prompts: [finalPrompt],
-        negative_prompt: negativePrompt
+        model: config.MODEL_NAME,
+        max_tokens: maxTokens,
+        system: config.VERIFICATION_SYSTEM_ROLE,
+        messages: [{ role: "user", content: config.REVIEW_INSTRUCTIONS }]
       };
-      // Make a POST request to /api/stablediffusion
-      const response = await fetch("https://visual-quran.vercel.app/api/stablediffusion", {
+      // For debugging: create a copy that prepends the system message.
+      let debugPayload = JSON.parse(JSON.stringify(payload));
+      debugPayload.messages.unshift({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
+      if (debug) {
+        document.getElementById("debugOutput").innerText += "Verification Payload Sent (debug view with system in messages):\n" + JSON.stringify(debugPayload, null, 2) + "\n\n";
+      }
+      const response = await fetch(config.VERCEL_PROXY_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
       const data = await response.json();
-      if (!data.success) {
-        console.error("Stability request failed:", data.error);
-        return;
-      }
-      // data.images is array of base64 or image URLs
-      const imageContainer = document.getElementById("imageOutput");
-      imageContainer.innerHTML = "";
-      data.images.forEach(imgUrl => {
-        const img = document.createElement("img");
-        img.src = imgUrl;
-        img.style.maxWidth = "300px";
-        imageContainer.appendChild(img);
-      });
-    }
-
-    // The verification step (the minimal version)
-    async function verifyPrompt() {
-      // We'll send only the REVIEW_INSTRUCTIONS
-      if (!config.REVIEW_INSTRUCTIONS || !config.MODEL_NAME) {
-        return "";
-      }
-      const maxTokens = config.MAX_TOKENS_MULTIPLIER * 1 + config.MAX_TOKENS_OVERHEAD;
-      const payload = {
-        model: config.MODEL_NAME,
-        max_tokens: maxTokens,
-        system: config.VERIFICATION_SYSTEM_ROLE || "",
-        messages: [
-          { role: "user", content: config.REVIEW_INSTRUCTIONS }
-        ]
-      };
       if (debug) {
-        document.getElementById("debugOutput").textContent += "Verification payload:\n" + JSON.stringify(payload, null, 2) + "\n";
+        document.getElementById("debugOutput").innerText += "Verification API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
       }
-      const res = await fetch(config.VERCEL_PROXY_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
       if (!data.content) {
         throw new Error("No content in verification response");
       }
-      return Array.isArray(data.content)
-        ? data.content.map(item => item.text).join("\n\n")
-        : data.content;
+      let reviewResponse = "";
+      if (Array.isArray(data.content)) {
+        reviewResponse = data.content.map(item => item.text).join("\n\n");
+      } else {
+        reviewResponse = data.content;
+      }
+      return reviewResponse;
     }
-
+    // --- End Verify Prompt ---
+    
+    // --- Form Submission Handler ---
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       
-      const surahNum = parseInt(document.getElementById("surahSelect").value);
-      const verseNum = parseInt(document.getElementById("verseSelect").value);
+      const surah = parseInt(document.getElementById("surahSelect").value);
+      const verse = parseInt(document.getElementById("verseSelect").value);
       const batch = parseInt(document.getElementById("batchSelect").value);
+      const surahItem = surahData.find(item => item["Surah Number"] === surah);
+      const verseMax = surahItem ? surahItem["Surah Verses"] : Infinity;
+      if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
+          surah < 1 || surah > 114 || verse < 1 || verse > verseMax || batch < 1 || batch > 3) {
+        alert("Please enter valid inputs.");
+        return;
+      }
+      if (Object.keys(config).length === 0) {
+        alert("Configuration not loaded. Please try again later.");
+        return;
+      }
       
-      // Basic validation
-      if (isNaN(surahNum) || isNaN(verseNum) || isNaN(batch)) {
-        alert("Please select valid surah/verse/batch.");
-        return;
-      }
-
-      // Build the user instruction
-      if (!config.USER_INSTRUCTION_TEMPLATE || !config.PREFILL_TEMPLATE) {
-        alert("Config not fully loaded. Please try again.");
-        return;
-      }
-
       const expectedPrefill = config.PREFILL_TEMPLATE
-        .replace("{SURAH_PADDED}", pad(surahNum, 3))
-        .replace("{VERSE_PADDED}", pad(verseNum, 3));
-
-      let userInstr = config.USER_INSTRUCTION_TEMPLATE
+        .replace("{SURAH_PADDED}", pad(surah, 3))
+        .replace("{VERSE_PADDED}", pad(verse, 3))
+        .trim();
+      
+      let userInstruction = config.USER_INSTRUCTION_TEMPLATE
         .replace("{BATCH}", batch)
-        .replace("{SURAH}", surahNum)
-        .replace("{VERSE}", verseNum)
+        .replace("{SURAH}", surah)
+        .replace("{VERSE}", verse)
         .replace("{PREFILL}", expectedPrefill);
-
-      // Prepend the common system role
-      const newUserInstruction = (config.COMMON_SYSTEM_ROLE || "") + "\n" + userInstr;
-
-      // Build the payload for the generation
+      
+      // Prepend the common system role to the instruction.
+      let newUserInstruction = config.COMMON_SYSTEM_ROLE + "\n" + userInstruction;
+      
       const maxTokens = batch * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
+      // Send the system prompt only as a top-level field and include just the user message.
       const generationPayload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
-        system: config.SYSTEM_ROLE || "",
+        system: config.SYSTEM_ROLE,
         messages: [
-          { role: "user", content: newUserInstruction },
-          { role: "assistant", content: expectedPrefill }
+          { role: "user", content: newUserInstruction }
         ]
       };
-
-      document.getElementById("rawOutput").textContent = "Generating prompts...";
-      document.getElementById("reviewedOutput").textContent = "";
-      document.getElementById("verifiedOutput").textContent = "";
-
+      
+      // Reset conversation with the initial message.
+      conversation = [
+        { role: "system", content: config.SYSTEM_ROLE },
+        { role: "user", content: newUserInstruction }
+      ];
+      
+      if (debug) {
+        document.getElementById("debugOutput").innerText += "Prompt Generation Payload Sent:\n" + JSON.stringify(generationPayload, null, 2) + "\n\n";
+      }
+      
+      document.getElementById("rawOutput").innerText = "Generating prompts...";
+      document.getElementById("reviewedOutput").innerText = "";
+      document.getElementById("verifiedOutput").innerText = "";
+      
       try {
-        // Call the generation
+        // Generate raw prompt.
         const genRes = await fetch(config.VERCEL_PROXY_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(generationPayload)
         });
         const genData = await genRes.json();
+        if (debug) {
+          document.getElementById("debugOutput").innerText += "Generation API Response:\n" + JSON.stringify(genData, null, 2) + "\n\n";
+        }
         if (!genData.content) {
           throw new Error("No content in generation response");
         }
-        // Combine if it's array
         let rawText = Array.isArray(genData.content)
-          ? genData.content.map(x => x.text).join("\n\n")
+          ? genData.content.map(item => item.text).join("\n\n")
           : genData.content;
-
-        document.getElementById("rawOutput").textContent = rawText;
-
-        // Next, call review
-        const reviewText = await verifyPrompt();
-        document.getElementById("reviewedOutput").textContent = reviewText;
-
-        // Decide final text
+        document.getElementById("rawOutput").innerText = rawText;
+        
+        // Add rawText to conversation.
+        conversation.push({ role: "assistant", content: rawText });
+        
+        // Call review.
+        const reviewResponse = await verifyPrompt();
+        document.getElementById("reviewedOutput").innerText = reviewResponse;
+        
+        // Determine final text:
+        // If review response is "Review Passed" or "No Previous Prompts Found", use rawText;
+        // if review response is "Connection Error: Please regenerate prompt", display that and exit;
+        // Otherwise, if review response is non-empty, use it; else fallback to rawText.
         let finalReviewedText;
-        const trimmedReview = reviewText.trim();
+        const trimmedReview = reviewResponse.trim();
         if (trimmedReview === "Review Passed" || trimmedReview === "No Previous Prompts Found") {
           finalReviewedText = rawText;
         } else if (trimmedReview === "Connection Error: Please regenerate prompt") {
-          document.getElementById("verifiedOutput").textContent = "Connection Error: Please regenerate prompt";
+          document.getElementById("verifiedOutput").innerText = "Connection Error: Please regenerate prompt";
           return;
         } else if (trimmedReview !== "") {
-          finalReviewedText = reviewText;
+          finalReviewedText = reviewResponse;
         } else {
           finalReviewedText = rawText;
         }
-
-        // Force prefill naming
-        const finalNumbered = forcePrefillNaming(finalReviewedText, surahNum, verseNum, batch);
-
-        // We no longer append negative words to the prompt. 
-        // Instead, we build a negativePromptString from config and pass it separately.
-        const negativePromptString = []
-          .concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS)
-          .join(", ");
-
-        // Our final "verified" text is just finalNumbered
-        document.getElementById("verifiedOutput").textContent = finalNumbered;
-
-        // Check for forbidden words in finalNumbered
+        
+        // Do numbering correction and build the final positive prompt.
+        const finalNumbered = forcePrefillNaming(finalReviewedText, surah, verse, batch);
+        
+        // Build the negative prompt string from config.
+        const negativePromptString = [].concat(
+          config.FORBIDDEN_EVIL_WORDS,
+          config.FORBIDDEN_NEUTRAL_WORDS,
+          config.FORBIDDEN_SPIRITUAL_WORDS
+        ).join(", ");
+        
+        // Display the final positive prompt in the Verified Output box.
+        document.getElementById("verifiedOutput").innerText = finalNumbered;
+        
+        // Check for forbidden words in the final positive prompt.
         if (containsForbiddenWords(finalNumbered)) {
           const found = getForbiddenWords(finalNumbered);
-          document.getElementById("verifiedOutput").textContent =
+          document.getElementById("verifiedOutput").innerText =
             "Sorry forbidden words (" + found.join(", ") + ") were found, please click generate prompt again and report to info@onewordquran.com";
           return;
         }
-
-        // Send finalNumbered + negativePromptString to stablediffusion
+        
+        // Finally, send the final positive prompt and the negative prompt separately.
         await sendToStableDiffusion(finalNumbered, negativePromptString);
-
-      } catch (err) {
-        console.error("Error:", err);
-        document.getElementById("rawOutput").textContent = "Error generating prompts.";
+      } catch (error) {
+        console.error("Error:", error);
+        if (error.toString().toLowerCase().includes("connection")) {
+          document.getElementById("rawOutput").innerText = "Connection Error: Please regenerate prompt";
+        } else {
+          document.getElementById("rawOutput").innerText = "Error generating prompts.";
+        }
+        if (debug) {
+          document.getElementById("debugOutput").innerText += "Error Details:\n" + error.toString() + "\n";
+        }
       }
     });
+    // --- End Form Submission Handler ---
   </script>
 </body>
 </html>
