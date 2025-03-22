@@ -56,10 +56,10 @@
     <h2>Raw Output</h2>
     <div id="rawOutput" class="output"></div>
     
-    <h2>Reviewed Output</h2>
+    <h2>AI Review of Text Prompt</h2>
     <div id="reviewedOutput" class="output"></div>
     
-    <h2>Verified Output</h2>
+    <h2>Keyword review of Output</h2>
     <div id="verifiedOutput" class="output"></div>
     
     <h2>Generated Images (From Stable Diffusion)</h2>
@@ -369,7 +369,6 @@
           document.getElementById("verifiedOutput").innerText = "Error: " + reviewResponse;
           return;
         } else if (normalizedReview.includes("Review Passed")) {
-          // Force review text to exactly "Review Passed" if acceptable.
           finalReviewedText = rawText;
           document.getElementById("verifiedOutput").innerText = "Review Passed";
         } else if (normalizedReview === "Connection Error: Please regenerate prompt") {
