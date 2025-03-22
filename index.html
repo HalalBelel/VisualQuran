@@ -306,7 +306,7 @@
     
     // Function to verify the prompt using review instructions only.
     async function verifyPrompt() {
-      // Remove any messages with role "system" from conversation
+      // Remove any messages with role "system" from conversation.
       let verificationMessages = conversation.filter(m => m.role !== "system");
       // Append the review instructions.
       verificationMessages.push({ 
@@ -318,12 +318,16 @@
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
-        system: config.VERIFICATION_SYSTEM_ROLE, // top-level system prompt
+        system: config.VERIFICATION_SYSTEM_ROLE, // Top-level system prompt.
         messages: verificationMessages
       };
       
+      // For debugging, create a copy that includes the system message in the array.
+      let debugPayload = JSON.parse(JSON.stringify(payload));
+      debugPayload.messages.push({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
+      
       if(debug) {
-        document.getElementById("debugOutput").innerText += "Verification Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
+        document.getElementById("debugOutput").innerText += "Verification Payload Sent (debug view with system in messages):\n" + JSON.stringify(debugPayload, null, 2) + "\n\n";
       }
       
       const response = await fetch(config.VERCEL_PROXY_URL, {
