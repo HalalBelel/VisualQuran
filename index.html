@@ -363,13 +363,17 @@
         document.getElementById("reviewedOutput").innerText = reviewResponse;
         
         let finalReviewedText;
-        const trimmedReview = reviewResponse.trim();
-        if (trimmedReview === "Review Passed" || trimmedReview === "No Previous Prompts Found") {
+        const normalizedReview = reviewResponse.trim().replace(/\.$/, "");
+        // If review response starts with "No", treat as an error.
+        if (normalizedReview.startsWith("No")) {
+          document.getElementById("verifiedOutput").innerText = "Error: " + reviewResponse;
+          return;
+        } else if (normalizedReview === "Review Passed") {
           finalReviewedText = rawText;
-        } else if (trimmedReview === "Connection Error: Please regenerate prompt") {
+        } else if (normalizedReview === "Connection Error: Please regenerate prompt") {
           document.getElementById("verifiedOutput").innerText = "Connection Error: Please regenerate prompt";
           return;
-        } else if (trimmedReview !== "") {
+        } else if (normalizedReview !== "") {
           finalReviewedText = reviewResponse;
         } else {
           finalReviewedText = rawText;
