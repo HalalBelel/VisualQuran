@@ -17,7 +17,9 @@
     select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
     button { padding: 10px 20px; border: none; background: #3498db; color: #fff; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s; margin: auto; }
     button:hover { background: #2980b9; }
-    .output, .debug, .version { background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto; }
+    .output, .debug, .version {
+      background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto;
+    }
     .output { max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace; }
     .debug { max-height: 300px; }
     .image-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
@@ -287,13 +289,16 @@
         .replace("{VERSE}", verse)
         .replace("{PREFILL}", expectedPrefill);
       
+      // Prepend the common system role to the instruction.
+      let newUserInstruction = config.COMMON_SYSTEM_ROLE + "\n" + userInstruction;
+      
       const maxTokens = batch * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
         system: config.SYSTEM_ROLE,
         messages: [
-          { role: "user", content: userInstruction },
+          { role: "user", content: newUserInstruction },
           { role: "assistant", content: expectedPrefill }
         ]
       };
@@ -301,7 +306,7 @@
       // Reset conversation with initial messages.
       conversation = [
         { role: "system", content: config.SYSTEM_ROLE },
-        { role: "user", content: userInstruction },
+        { role: "user", content: newUserInstruction },
         { role: "assistant", content: expectedPrefill }
       ];
       
@@ -344,7 +349,7 @@
         document.getElementById("reviewedOutput").innerText = reviewResponse;
         
         // Determine final text:
-        // If reviewResponse trimmed equals "Review Passed", use rawText; 
+        // If reviewResponse trimmed equals "Review Passed", use rawText;
         // Otherwise, if reviewResponse is non-empty, use it; else fallback to rawText.
         let finalReviewedText;
         if (reviewResponse.trim() === "Review Passed") {
