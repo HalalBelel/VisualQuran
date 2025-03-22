@@ -5,99 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quranic Verse Stable Diffusion Prompt Generator</title>
   <style>
-    /* Reset some basic elements */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f4f8;
-      color: #333;
-      padding: 20px;
-      line-height: 1.6;
-    }
-    .container {
-      max-width: 960px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    h1, h2 {
-      text-align: center;
-      margin-bottom: 10px;
-      color: #2c3e50;
-    }
-    p {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    form {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: space-around;
-      margin-bottom: 20px;
-    }
-    form > div {
-      flex: 1 1 200px;
-      min-width: 200px;
-    }
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
-    select {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      padding: 10px 20px;
-      border: none;
-      background: #3498db;
-      color: #fff;
-      font-size: 1rem;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.3s;
-      margin: auto;
-    }
-    button:hover {
-      background: #2980b9;
-    }
-    .output, .debug, .version {
-      background: #f7f7f7;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      margin-bottom: 20px;
-      overflow: auto;
-    }
-    .output {
-      max-height: 300px;
-      white-space: pre-wrap;
-      font-family: "Courier New", Courier, monospace;
-    }
-    .debug {
-      max-height: 300px;
-    }
-    .image-gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-    .image-gallery img {
-      width: 100%;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
+    /* Reset basic elements */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; color: #333; padding: 20px; line-height: 1.6; }
+    .container { max-width: 960px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1, h2 { text-align: center; margin-bottom: 10px; color: #2c3e50; }
+    p { text-align: center; margin-bottom: 20px; }
+    form { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-around; margin-bottom: 20px; }
+    form > div { flex: 1 1 200px; min-width: 200px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 10px 20px; border: none; background: #3498db; color: #fff; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s; margin: auto; }
+    button:hover { background: #2980b9; }
+    .output, .debug, .version { background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto; }
+    .output { max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace; }
+    .debug { max-height: 300px; }
+    .image-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .image-gallery img { width: 100%; border-radius: 4px; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
@@ -106,17 +30,14 @@
     <p>Enter the verse details below. (Anthropic API key is handled by the Vercel proxy.)</p>
     
     <form id="promptForm">
-      <!-- Surah dropdown -->
       <div id="surahSelectWrapper">
         <label for="surahSelect">Select Surah:</label>
         <select id="surahSelect"></select>
       </div>
-      <!-- Verse/Ayah dropdown -->
       <div id="verseSelectWrapper">
         <label for="verseSelect">Select Ayah:</label>
         <select id="verseSelect"></select>
       </div>
-      <!-- Batch dropdown -->
       <div id="batchSelectWrapper">
         <label for="batchSelect">Select Consecutive Verses:</label>
         <select id="batchSelect">
@@ -150,25 +71,25 @@
   </div>
   
   <script>
-    // Author update and version stamp.
+    // Version info.
     const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
     const modifiedDate = new Date(document.lastModified);
     const versionText = "Version: " + modifiedDate.toLocaleDateString("en-AU") + " " + modifiedDate.toLocaleTimeString("en-AU");
     document.getElementById("versionInfo").textContent = versionText;
     document.getElementById("updatesBox").textContent = AUTHOR_UPDATE + "\n" + versionText;
     
-    // Debug flag (set to false to disable debug output)
+    // Debug flag.
     const debug = true;
     
-    // Global conversation variable to maintain context with Claude.
+    // Global conversation array.
     let conversation = [];
     
-    // Utility function to pad numbers with leading zeros.
+    // Utility: pad number.
     function pad(num, size) {
       return num.toString().padStart(size, '0');
     }
     
-    // Splits the Anthropic text into paragraphs and forces each prompt to have a proper code.
+    // Numbering correction: force each prompt to have a proper code.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
       let corrected = [];
@@ -189,13 +110,13 @@
       return corrected.join("\n");
     }
     
-    // Appends the chosen parameters to each prompt.
+    // Append negative parameters.
     function appendParameters(text, params) {
       const lines = text.split("\n").filter(line => line.trim() !== "");
       return lines.map(line => line.trim() + " " + params).join("\n");
     }
     
-    // Load configuration from a.json.
+    // Load configuration.
     let config = {};
     fetch("a.json")
       .then(response => response.json())
@@ -210,10 +131,8 @@
         alert("Failed to load configuration (a.json).");
       });
     
-    // Global variable to hold surah data.
+    // Load surah data.
     let surahData = [];
-    
-    // Fetch surahnames.json and populate the surah select, and store the data.
     fetch("surahnames.json")
       .then(response => response.json())
       .then(data => {
@@ -226,7 +145,6 @@
           option.dataset.verses = item["Surah Verses"];
           surahSelect.appendChild(option);
         });
-        // Set the verse dropdown options using the first surah.
         updateVerseDropdown(parseInt(surahSelect.value));
       })
       .catch(err => {
@@ -236,7 +154,7 @@
         }
       });
     
-    // Update the verse dropdown based on the selected surah's verses.
+    // Update verse dropdown.
     function updateVerseDropdown(surahNumber) {
       const surahItem = surahData.find(item => item["Surah Number"] === surahNumber);
       const verseSelect = document.getElementById("verseSelect");
@@ -256,18 +174,15 @@
       }
     }
     
-    // Update verse dropdown when surah selection changes.
     document.getElementById("surahSelect").addEventListener("change", function() {
-      const surahNum = parseInt(this.value);
-      updateVerseDropdown(surahNum);
+      updateVerseDropdown(parseInt(this.value));
     });
     
-    // This function calls our stablediffusion endpoint.
+    // Send prompt to Stable Diffusion.
     async function sendToStableDiffusion(promptText) {
       const prompts = promptText.split("\n").filter(line => line.trim() !== "");
       const sdEndpoint = "https://visual-quran.vercel.app/api/stablediffusion";
       const payload = { prompts };
-    
       let response = await fetch(sdEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -279,7 +194,6 @@
         document.getElementById("debugOutput").innerText += "Stability Error:\n" + data.error + "\n\n";
         return;
       }
-    
       const imageOutput = document.getElementById("imageOutput");
       imageOutput.innerHTML = "";
       data.images.forEach((imgUrl) => {
@@ -289,70 +203,58 @@
       });
     }
     
-    // Function to verify the prompt using review instructions from a.json.
+    // Verify the raw output using review instructions from a.json.
     async function verifyPrompt() {
-      // Remove any messages with role "system" from conversation.
+      // Use conversation excluding any system messages.
       let verificationMessages = conversation.filter(m => m.role !== "system");
-      // Append the review instructions obtained from a.json.
+      // Append review instructions (from a.json).
       verificationMessages.push({ 
         role: "user", 
         content: config.REVIEW_INSTRUCTIONS 
       });
-      
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
-        system: config.VERIFICATION_SYSTEM_ROLE, // Top-level system prompt.
+        system: config.VERIFICATION_SYSTEM_ROLE, // Top-level system.
         messages: verificationMessages
       };
-      
-      // For debugging, create a copy that prepends the system message into the messages array.
+      // For debugging: create a copy that prepends the system message.
       let debugPayload = JSON.parse(JSON.stringify(payload));
       debugPayload.messages.unshift({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
-      
       if(debug) {
         document.getElementById("debugOutput").innerText += "Verification Payload Sent (debug view with system in messages):\n" + JSON.stringify(debugPayload, null, 2) + "\n\n";
       }
-      
       const response = await fetch(config.VERCEL_PROXY_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      
       const data = await response.json();
       if(debug) {
         document.getElementById("debugOutput").innerText += "Verification API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
       }
-      
       if (!data.content) {
         throw new Error("No content in verification response");
       }
-      
       let modifications = "";
       if (Array.isArray(data.content)) {
         modifications = data.content.map(item => item.text).join("\n\n");
       } else {
         modifications = data.content;
       }
-      
       conversation.push({ role: "assistant", content: modifications });
       return modifications;
     }
     
-    // Function to check for forbidden words in a given text.
+    // Check for forbidden words.
     function containsForbiddenWords(text) {
-      let forbiddenFound = false;
       const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
       for (let word of allForbidden) {
         let regex = new RegExp("\\b" + word + "\\b", "i");
-        if (regex.test(text)) {
-          forbiddenFound = true;
-          break;
-        }
+        if (regex.test(text)) return true;
       }
-      return forbiddenFound;
+      return false;
     }
     
     // Form submission handler.
@@ -362,7 +264,6 @@
       const surah = parseInt(document.getElementById("surahSelect").value);
       const verse = parseInt(document.getElementById("verseSelect").value);
       const batch = parseInt(document.getElementById("batchSelect").value);
-      
       const surahItem = surahData.find(item => item["Surah Number"] === surah);
       const verseMax = surahItem ? surahItem["Surah Verses"] : Infinity;
       if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
@@ -370,23 +271,22 @@
         alert("Please enter valid inputs.");
         return;
       }
-    
       if (Object.keys(config).length === 0) {
         alert("Configuration not loaded. Please try again later.");
         return;
       }
-    
+      
       const expectedPrefill = config.PREFILL_TEMPLATE
         .replace("{SURAH_PADDED}", pad(surah, 3))
         .replace("{VERSE_PADDED}", pad(verse, 3))
         .trim();
-    
+      
       let userInstruction = config.USER_INSTRUCTION_TEMPLATE
         .replace("{BATCH}", batch)
         .replace("{SURAH}", surah)
         .replace("{VERSE}", verse)
         .replace("{PREFILL}", expectedPrefill);
-    
+      
       const maxTokens = batch * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
         model: config.MODEL_NAME,
@@ -397,18 +297,18 @@
           { role: "assistant", content: expectedPrefill }
         ]
       };
-    
-      // Reset conversation context with initial messages.
+      
+      // Reset conversation with initial messages.
       conversation = [
         { role: "system", content: config.SYSTEM_ROLE },
         { role: "user", content: userInstruction },
         { role: "assistant", content: expectedPrefill }
       ];
-    
+      
       if(debug) {
         document.getElementById("debugOutput").innerText += "Prompt Generation Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
       }
-    
+      
       document.getElementById("rawOutput").innerText = "Generating prompts...";
       document.getElementById("appendedOutput").innerText = "";
       document.getElementById("verifiedOutput").innerText = "";
@@ -419,42 +319,38 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        
         const data = await response.json();
         if(debug) {
           document.getElementById("debugOutput").innerText += "Generation API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
         }
-        
         if (!data.content) {
           throw new Error("No content in response");
         }
-        
         let rawText = "";
         if (Array.isArray(data.content)) {
           rawText = data.content.map(item => item.text).join("\n\n");
         } else {
           rawText = data.content;
         }
-        
         document.getElementById("rawOutput").innerText = rawText;
+        // Add rawText to conversation.
+        conversation.push({ role: "assistant", content: rawText });
         
-        const numbered = forcePrefillNaming(rawText, surah, verse, batch);
-        const appendedPrompt = appendParameters(numbered, config.APPEND_PARAMS);
-        document.getElementById("appendedOutput").innerText = appendedPrompt;
-        
-        // Call verification to get modifications (if any) based solely on review instructions from a.json.
+        // Call verification on the raw output.
         const modifications = await verifyPrompt();
-        let finalVerifiedPrompt = appendedPrompt;
+        let reviewedText = rawText;
         if (modifications.trim() !== "") {
-          finalVerifiedPrompt = appendedPrompt + "\n" + modifications;
+          reviewedText = modifications;
         }
+        // Now do numbering correction and append negative prompts.
+        const finalNumbered = forcePrefillNaming(reviewedText, surah, verse, batch);
+        const finalVerifiedPrompt = appendParameters(finalNumbered, config.APPEND_PARAMS);
         document.getElementById("verifiedOutput").innerText = finalVerifiedPrompt;
         
         if (containsForbiddenWords(finalVerifiedPrompt)) {
           document.getElementById("verifiedOutput").innerText = "Sorry forbidden words found, please click generate prompt again and report to info@onewordquran.com";
           return;
         }
-        
         await sendToStableDiffusion(finalVerifiedPrompt);
       } catch (error) {
         console.error("Error:", error);
