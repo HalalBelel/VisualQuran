@@ -17,7 +17,9 @@
     select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
     button { padding: 10px 20px; border: none; background: #3498db; color: #fff; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s; margin: auto; }
     button:hover { background: #2980b9; }
-    .output, .debug, .version { background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto; }
+    .output, .debug, .version {
+      background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto;
+    }
     .output { max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace; }
     .debug { max-height: 300px; }
     .image-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
@@ -77,7 +79,7 @@
       return num.toString().padStart(size, '0');
     }
     
-    // Correct numbering: Ensure each prompt starts with the proper code.
+    // Numbering correction: Ensures each prompt starts with a proper code.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
       let corrected = [];
@@ -104,7 +106,7 @@
       return lines.map(line => line.trim() + " " + params).join("\n");
     }
     
-    // Expand placeholders in a text using config arrays.
+    // Expand placeholders in configuration strings.
     function expandPlaceholders(text, config) {
       let result = text;
       if (config.ALLOWED_CATEGORIES) {
@@ -122,7 +124,7 @@
       return result;
     }
     
-    // Check for forbidden words in the text.
+    // Check for forbidden words in the given text.
     function containsForbiddenWords(text) {
       const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
       for (let word of allForbidden) {
@@ -146,12 +148,13 @@
     }
     // --- End Helper Functions ---
     
-    // Version information.
+    // --- Version Info ---
     const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
     const modifiedDate = new Date(document.lastModified);
     const versionText = "Version: " + modifiedDate.toLocaleDateString("en-AU") + " " + modifiedDate.toLocaleTimeString("en-AU");
     document.getElementById("versionInfo").textContent = versionText;
     document.getElementById("updatesBox").textContent = AUTHOR_UPDATE + "\n" + versionText;
+    // --- End Version Info ---
     
     // Debug flag.
     const debug = true;
@@ -159,7 +162,7 @@
     // Global conversation array.
     let conversation = [];
     
-    // Load configuration from a.json.
+    // --- Load Configuration ---
     let config = {};
     fetch("a.json")
       .then(response => response.json())
@@ -178,8 +181,9 @@
         console.error("Error loading configuration:", err);
         alert("Failed to load configuration (a.json).");
       });
+    // --- End Load Configuration ---
     
-    // Load surah data.
+    // --- Load Surah Data ---
     let surahData = [];
     fetch("surahnames.json")
       .then(response => response.json())
@@ -201,6 +205,7 @@
           document.getElementById("debugOutput").innerText += "Error loading surahnames.json:\n" + err.toString() + "\n";
         }
       });
+    // --- End Load Surah Data ---
     
     // Update verse dropdown.
     function updateVerseDropdown(surahNumber) {
@@ -225,8 +230,9 @@
     document.getElementById("surahSelect").addEventListener("change", function() {
       updateVerseDropdown(parseInt(this.value));
     });
+    // --- End Update Verse Dropdown ---
     
-    // Send prompt to Stable Diffusion.
+    // --- Send Prompt to Stable Diffusion ---
     async function sendToStableDiffusion(promptText) {
       const prompts = promptText.split("\n").filter(line => line.trim() !== "");
       const sdEndpoint = "https://visual-quran.vercel.app/api/stablediffusion";
@@ -250,8 +256,9 @@
         imageOutput.appendChild(img);
       });
     }
+    // --- End Send Prompt ---
     
-    // Verify the raw output using only the review instructions from a.json.
+    // --- Verify Prompt ---
     async function verifyPrompt() {
       // Send only the review instructions.
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
@@ -261,7 +268,7 @@
         system: config.VERIFICATION_SYSTEM_ROLE,
         messages: [{ role: "user", content: config.REVIEW_INSTRUCTIONS }]
       };
-      // For debugging: create a copy that prepends the system message.
+      // Debug payload: add system message in messages.
       let debugPayload = JSON.parse(JSON.stringify(payload));
       debugPayload.messages.unshift({ role: "system", content: config.VERIFICATION_SYSTEM_ROLE });
       if (debug) {
@@ -287,8 +294,9 @@
       }
       return reviewResponse;
     }
+    // --- End Verify Prompt ---
     
-    // Form submission handler.
+    // --- Form Submission Handler ---
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       
@@ -395,9 +403,9 @@
         // Show final prompt in Verified Output box.
         document.getElementById("verifiedOutput").innerText = finalPrompt;
         
-        // Check for forbidden words.
-        if (containsForbiddenWords(finalPrompt)) {
-          const forbiddenList = getForbiddenWords(finalPrompt);
+        // Check for forbidden words in the generated prompt part (excluding negative prompts).
+        if (containsForbiddenWords(finalNumbered)) {
+          const forbiddenList = getForbiddenWords(finalNumbered);
           document.getElementById("verifiedOutput").innerText = "Sorry forbidden words (" + forbiddenList.join(", ") + ") were found, please click generate prompt again and report to info@onewordquran.com";
           return;
         }
@@ -411,6 +419,7 @@
         }
       }
     });
+    // --- End Form Submission Handler ---
   </script>
 </body>
 </html>
