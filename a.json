@@ -1,8 +1,8 @@
 {
   "COMMON_SYSTEM_ROLE": "You are playing a strict taboo-style visual-description game as an expert in Quranic symbolism and Stable Diffusion image prompt generation. Your task is to generate precise image descriptions based solely on the authentic tafsir of Quranic verses. You must only use the allowed categories: {ALLOWED_CATEGORIES}. You must not mention or imply any of the following forbidden words: FORBIDDEN_EVIL_WORDS ({FORBIDDEN_EVIL_WORDS}), FORBIDDEN_NEUTRAL_WORDS ({FORBIDDEN_NEUTRAL_WORDS}), FORBIDDEN_SPIRITUAL_WORDS ({FORBIDDEN_SPIRITUAL_WORDS}). Replace any word from FORBIDDEN_EVIL_WORDS with 'column of smoke', any word from FORBIDDEN_NEUTRAL_WORDS with a term from ALLOWED_CATEGORIES, and any word from FORBIDDEN_SPIRITUAL_WORDS with 'beam of light'.",
-  "USER_INSTRUCTION_TEMPLATE": "Generate {BATCH} consecutive Quranic verse prompts starting from Surah {SURAH}, Verse {VERSE}. Each prompt must begin with a 6-digit code (SSSVVV), where SSS is the zero-padded Surah number and VVV is the zero-padded verse number, followed by ' - ' and a strictly literal, precise visual description suitable for Stable Diffusion. Describe exactly what should visually appear, maintaining photographic realism, natural lighting, and detailed textures. For the first prompt, start exactly with '{PREFILL}'.",
-  "PREFILL_TEMPLATE": "{SURAH_PADDED}{VERSE_PADDED} -",
-  "APPEND_PARAMS": "Negative prompt: {FORBIDDEN_EVIL_WORDS}, {FORBIDDEN_NEUTRAL_WORDS}, {FORBIDDEN_SPIRITUAL_WORDS}. Guidance scale: 9. Aspect ratio: 16:9. Style: photographic realism, natural lighting, highly detailed textures.",
+  "USER_INSTRUCTION_TEMPLATE": "Generate {BATCH} consecutive Quranic verse prompts starting from Surah {SURAH}, Verse {VERSE}. Each prompt must begin with a 6-digit code (SSSVVV), where SSS is the zero-padded Surah number and VVV is the zero-padded verse number, followed by ' ||| ' and a strictly literal, precise visual description suitable for Stable Diffusion. Describe exactly what should visually appear, maintaining photographic realism, natural lighting, and detailed textures. For the first prompt, start exactly with '{PREFILL}'.",
+  "PREFILL_TEMPLATE": "{SURAH_PADDED}{VERSE_PADDED} |||",
+  "APPEND_PARAMS": "Negative prompt: {FORBIDDEN_NEUTRAL_WORDS}, {FORBIDDEN_EVIL_WORDS}, {FORBIDDEN_SPIRITUAL_WORDS}. Guidance scale: 9. Aspect ratio: 16:9. Style: photographic realism, natural lighting, highly detailed textures.",
   "MODEL_NAME": "claude-3-7-sonnet-20250219",
   "IMAGE_MODEL_NAME": "stable-diffusion-xl-1024-v1-0",
   "MAX_TOKENS_MULTIPLIER": 100,
@@ -24,6 +24,15 @@
     "crosses"
   ],
   "FORBIDDEN_NEUTRAL_WORDS": [
+    "calligraphy",
+    "letters",
+    "writing",
+    "obscure items",
+    "uncommon words",
+    "illustration",
+    "cartoon",
+    "3D render",
+    "figurative art",
     "humans",
     "humanoids",
     "human-like figures",
@@ -38,15 +47,6 @@
     "birds",
     "wings",
     "text",
-    "calligraphy",
-    "letters",
-    "writing",
-    "obscure items",
-    "uncommon words",
-    "illustration",
-    "cartoon",
-    "3D render",
-    "figurative art"
   ],
   "FORBIDDEN_SPIRITUAL_WORDS": [
     "spiritual entities",
