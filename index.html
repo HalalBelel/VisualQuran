@@ -368,25 +368,28 @@
         if (normalizedReview.startsWith("No")) {
           document.getElementById("verifiedOutput").innerText = "Error: " + reviewResponse;
           return;
-        } else if (normalizedReview === "Review Passed") {
+        } else if (normalizedReview.includes("Review Passed")) {
+          // Force review text to exactly "Review Passed" if acceptable.
           finalReviewedText = rawText;
+          document.getElementById("verifiedOutput").innerText = "Review Passed";
         } else if (normalizedReview === "Connection Error: Please regenerate prompt") {
           document.getElementById("verifiedOutput").innerText = "Connection Error: Please regenerate prompt";
           return;
         } else if (normalizedReview !== "") {
           finalReviewedText = reviewResponse;
+          document.getElementById("verifiedOutput").innerText = finalReviewedText;
         } else {
           finalReviewedText = rawText;
+          document.getElementById("verifiedOutput").innerText = "Review Passed";
         }
         
+        // Even though the verified output shows "Review Passed", use the full finalReviewedText for image generation.
         const finalNumbered = forcePrefillNaming(finalReviewedText, surah, verse, batch);
         const negativePromptString = [].concat(
           config.FORBIDDEN_EVIL_WORDS,
           config.FORBIDDEN_NEUTRAL_WORDS,
           config.FORBIDDEN_SPIRITUAL_WORDS
         ).join(", ");
-        
-        document.getElementById("verifiedOutput").innerText = finalNumbered;
         
         if (containsForbiddenWords(finalNumbered)) {
           const found = getForbiddenWords(finalNumbered);
