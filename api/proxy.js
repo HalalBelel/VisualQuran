@@ -15,6 +15,25 @@ export default async function handler(req, res) {
   const apiUrl = "https://api.anthropic.com/v1/messages";
   
   try {
+    // Only process the body for non-GET requests.
+    let body = req.method === "GET" ? null : req.body;
+    
+    // If there's a messages array, remove any messages with role "system"
+    // and set their content in a top-level "system" field.
+    if (body && Array.isArray(body.messages)) {
+      const systemMessages = body.messages.filter(
+        msg => msg.role && msg.role.toLowerCase() === "system"
+      );
+      if (systemMessages.length > 0) {
+        // Combine system messages if there are more than one.
+        body.system = systemMessages.map(msg => msg.content).join("\n");
+        // Remove system messages from the messages array.
+        body.messages = body.messages.filter(
+          msg => msg.role.toLowerCase() !== "system"
+        );
+      }
+    }
+    
     const response = await fetch(apiUrl, {
       method: req.method,
       headers: {
@@ -22,7 +41,7 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
         "anthropic-version": "2023-06-01"
       },
-      body: req.method === "GET" ? null : JSON.stringify(req.body)
+      body: req.method === "GET" ? null : JSON.stringify(body)
     });
     
     const data = await response.json();
