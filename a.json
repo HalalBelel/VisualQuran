@@ -9,167 +9,632 @@
   "MAX_TOKENS_OVERHEAD": 100,
   "VERCEL_PROXY_URL": "https://visual-quran-git-main-halalbelels-projects.vercel.app/api/proxy",
   "REVIEW_INSTRUCTIONS": "Please edit the prompts given to be both strictly Islamically permissible to depict as photorealistic art (e.g no beings) as well as being cohesive and ideal as a text input for Stable Diffusion to generate an image. If there are no significant changes, only reply 'Review Passed' with no other commentary, otherwise comment exactly the phrase 'The updated prompt is as follows:' followed by the exact prompt with no other commentary, ensuring it begins with a 6-digit code (SSSVVV), where SSS is the zero-padded Surah number and VVV is the zero-padded verse number, followed by ' ||| ' and is a strictly literal, precise, isltamically suitable, visual description for Stable Diffusion to turn into an image.",
-  "SYSTEM_ROLE": "You are an expert in what subjects are strictly islamically permissable to depict as photorealistic art and an expert in writing text prompts for stable diffusion AI to turn into images. Your role is to describe image prompts for the Stable Diffusion text to image generator that convey the symbolic meaning of the authentic tafsir of the requested quranic verses through only literal, precise, islamically permissible descriptions. Stable diffusion does not understand nuance or context or commentary, you have to be specific and ensure every single word you say both in isolation and as the whole prompt is completely islamically permissable be depicted literally as photorealistic art. You can use abstraction but you have to ensure you are describing a cohesive instantly understandable image that conveys the meaning of the verse in a permissible visual way."
+  "SYSTEM_ROLE": "You are an expert in what subjects are strictly islamically permissable to depict as photorealistic art and an expert in writing text prompts for stable diffusion AI to turn into images. Your role is to describe image prompts for the Stable Diffusion text to image generator that convey the symbolic meaning of the authentic tafsir of the requested quranic verses through only literal, precise, islamically permissible descriptions. Stable diffusion does not understand nuance or context or commentary, you have to be specific and ensure every single word you say both in isolation and as the whole prompt is completely islamically permissable be depicted literally as photorealistic art. You can use abstraction but you have to ensure you are describing a cohesive instantly understandable image that conveys the meaning of the verse in a permissible visual way.",
   "FORBIDDEN_EVIL_WORDS": [
-    { "keyword": "Devil", "halal_substitute": "whirlwind of dark smoke" },
-    { "keyword": "Devils", "halal_substitute": "whirling dark shadows" },
-    { "keyword": "Demon", "halal_substitute": "fiery dark haze" },
-    { "keyword": "Demons", "halal_substitute": "thick dark haze" },
-    { "keyword": "Satan", "halal_substitute": "whirlwind of dark smoke" },
-    { "keyword": "Shaytan", "halal_substitute": "storm of dark smoke" },
-    { "keyword": "Shaitan", "halal_substitute": "storm of dark smoke" },
-    { "keyword": "Iblis", "halal_substitute": "billowing black smoke" },
-    { "keyword": "Baal", "halal_substitute": "shattered stone fragments" },
-    { "keyword": "Pharaoh", "halal_substitute": "ancient deserted ruins" },
-    { "keyword": "Haman", "halal_substitute": "ruined palace stones" },
-    { "keyword": "Jalut", "halal_substitute": "broken armor pieces" },
-    { "keyword": "Goliath", "halal_substitute": "broken armor pieces" },
-    { "keyword": "Qarun", "halal_substitute": "cracked earth ground" },
-    { "keyword": "Korah", "halal_substitute": "cracked earth ground" },
-    { "keyword": "As-Samiri", "halal_substitute": "scattered golden dust" },
-    { "keyword": "the Samaritan", "halal_substitute": "scattered golden dust" },
-    { "keyword": "Azar", "halal_substitute": "broken idol stone" },
-    { "keyword": "Abu Lahab", "halal_substitute": "blazing flame" },
-    { "keyword": "Taghut", "halal_substitute": "shattered idol statue" },
-    { "keyword": "Jibt", "halal_substitute": "dark mist" },
-    { "keyword": "Wadd", "halal_substitute": "shattered stone" },
-    { "keyword": "Suwa‘", "halal_substitute": "cracked stone" },
-    { "keyword": "Yaghuth", "halal_substitute": "broken stone" },
-    { "keyword": "Ya‘uq", "halal_substitute": "crumbled stone" },
-    { "keyword": "Nasr", "halal_substitute": "ruined stone" },
-    { "keyword": "Al-Lat", "halal_substitute": "smashed stone" },
-    { "keyword": "Al-‘Uzza", "halal_substitute": "broken rock" },
-    { "keyword": "Manat", "halal_substitute": "shattered rock" },
-    { "keyword": "Golden Calf", "halal_substitute": "molten gold form" },
-    { "keyword": "Idol", "halal_substitute": "geometric pattern design" },
-    { "keyword": "Idols", "halal_substitute": "geometric pattern designs" },
-    { "keyword": "Statue", "halal_substitute": "abstract geometric motif" },
-    { "keyword": "Statues", "halal_substitute": "abstract geometric motifs" },
-    { "keyword": "figurines", "halal_substitute": "delicate carved forms" },
-    { "keyword": "carvings", "halal_substitute": "intricate stone carvings" },
-    { "keyword": "sculptures", "halal_substitute": "abstract stone forms" },
-    { "keyword": "effigies", "halal_substitute": "broken effigy fragments" },
-    { "keyword": "crafted likenesses", "halal_substitute": "handcrafted stone fragments" },
-    { "keyword": "objects of idol worship", "halal_substitute": "sacred geometric patterns" },
-    { "keyword": "satanic symbols", "halal_substitute": "ominous dark motifs" },
-    { "keyword": "crosses", "halal_substitute": "intersecting shadow lines" }
+    {
+      "keyword": "Devil",
+      "halal_substitute": "whirlwind of dark smoke"
+    },
+    {
+      "keyword": "Devils",
+      "halal_substitute": "whirling dark shadows"
+    },
+    {
+      "keyword": "Demon",
+      "halal_substitute": "fiery dark haze"
+    },
+    {
+      "keyword": "Demons",
+      "halal_substitute": "thick dark haze"
+    },
+    {
+      "keyword": "Satan",
+      "halal_substitute": "whirlwind of dark smoke"
+    },
+    {
+      "keyword": "Shaytan",
+      "halal_substitute": "storm of dark smoke"
+    },
+    {
+      "keyword": "Shaitan",
+      "halal_substitute": "storm of dark smoke"
+    },
+    {
+      "keyword": "Iblis",
+      "halal_substitute": "billowing black smoke"
+    },
+    {
+      "keyword": "Baal",
+      "halal_substitute": "shattered stone fragments"
+    },
+    {
+      "keyword": "Pharaoh",
+      "halal_substitute": "ancient deserted ruins"
+    },
+    {
+      "keyword": "Haman",
+      "halal_substitute": "ruined palace stones"
+    },
+    {
+      "keyword": "Jalut",
+      "halal_substitute": "broken armor pieces"
+    },
+    {
+      "keyword": "Goliath",
+      "halal_substitute": "broken armor pieces"
+    },
+    {
+      "keyword": "Qarun",
+      "halal_substitute": "cracked earth ground"
+    },
+    {
+      "keyword": "Korah",
+      "halal_substitute": "cracked earth ground"
+    },
+    {
+      "keyword": "As-Samiri",
+      "halal_substitute": "scattered golden dust"
+    },
+    {
+      "keyword": "the Samaritan",
+      "halal_substitute": "scattered golden dust"
+    },
+    {
+      "keyword": "Azar",
+      "halal_substitute": "broken idol stone"
+    },
+    {
+      "keyword": "Abu Lahab",
+      "halal_substitute": "blazing flame"
+    },
+    {
+      "keyword": "Taghut",
+      "halal_substitute": "shattered idol statue"
+    },
+    {
+      "keyword": "Jibt",
+      "halal_substitute": "dark mist"
+    },
+    {
+      "keyword": "Wadd",
+      "halal_substitute": "shattered stone"
+    },
+    {
+      "keyword": "Suwa‘",
+      "halal_substitute": "cracked stone"
+    },
+    {
+      "keyword": "Yaghuth",
+      "halal_substitute": "broken stone"
+    },
+    {
+      "keyword": "Ya‘uq",
+      "halal_substitute": "crumbled stone"
+    },
+    {
+      "keyword": "Nasr",
+      "halal_substitute": "ruined stone"
+    },
+    {
+      "keyword": "Al-Lat",
+      "halal_substitute": "smashed stone"
+    },
+    {
+      "keyword": "Al-‘Uzza",
+      "halal_substitute": "broken rock"
+    },
+    {
+      "keyword": "Manat",
+      "halal_substitute": "shattered rock"
+    },
+    {
+      "keyword": "Golden Calf",
+      "halal_substitute": "molten gold form"
+    },
+    {
+      "keyword": "Idol",
+      "halal_substitute": "geometric pattern design"
+    },
+    {
+      "keyword": "Idols",
+      "halal_substitute": "geometric pattern designs"
+    },
+    {
+      "keyword": "Statue",
+      "halal_substitute": "abstract geometric motif"
+    },
+    {
+      "keyword": "Statues",
+      "halal_substitute": "abstract geometric motifs"
+    },
+    {
+      "keyword": "figurines",
+      "halal_substitute": "delicate carved forms"
+    },
+    {
+      "keyword": "carvings",
+      "halal_substitute": "intricate stone carvings"
+    },
+    {
+      "keyword": "sculptures",
+      "halal_substitute": "abstract stone forms"
+    },
+    {
+      "keyword": "effigies",
+      "halal_substitute": "broken effigy fragments"
+    },
+    {
+      "keyword": "crafted likenesses",
+      "halal_substitute": "handcrafted stone fragments"
+    },
+    {
+      "keyword": "objects of idol worship",
+      "halal_substitute": "sacred geometric patterns"
+    },
+    {
+      "keyword": "satanic symbols",
+      "halal_substitute": "ominous dark motifs"
+    },
+    {
+      "keyword": "crosses",
+      "halal_substitute": "intersecting shadow lines"
+    }
   ],
   "FORBIDDEN_NEUTRAL_WORDS": [
-    { "keyword": "Allah", "halal_substitute": "Islamic calligraphy pattern (Allah’s name)" },
-    { "keyword": "God", "halal_substitute": "radiant burst of light" },
-    { "keyword": "Lord", "halal_substitute": "shining celestial light" },
-    { "keyword": "Muhammad", "halal_substitute": "radiant beam of light" },
-    { "keyword": "Ahmad", "halal_substitute": "glowing beam of light" },
-    { "keyword": "Adam", "halal_substitute": "brilliant ray of light" },
-    { "keyword": "Idris", "halal_substitute": "luminous ray of light" },
-    { "keyword": "Enoch", "halal_substitute": "luminous ray of light" },
-    { "keyword": "Nuh", "halal_substitute": "shining pillar of light" },
-    { "keyword": "Noah", "halal_substitute": "shining pillar of light" },
-    { "keyword": "Hud", "halal_substitute": "radiant light" },
-    { "keyword": "Salih", "halal_substitute": "bright beam of light" },
-    { "keyword": "Saleh", "halal_substitute": "bright beam of light" },
-    { "keyword": "Ibrahim", "halal_substitute": "glowing light" },
-    { "keyword": "Abraham", "halal_substitute": "glowing light" },
-    { "keyword": "Lut", "halal_substitute": "beam of pure light" },
-    { "keyword": "Lot", "halal_substitute": "beam of pure light" },
-    { "keyword": "Ismail", "halal_substitute": "brilliant light" },
-    { "keyword": "Ishmael", "halal_substitute": "brilliant light" },
-    { "keyword": "Ishaq", "halal_substitute": "radiant light" },
-    { "keyword": "Isaac", "halal_substitute": "radiant light" },
-    { "keyword": "Ya‘qub", "halal_substitute": "shining light" },
-    { "keyword": "Jacob", "halal_substitute": "shining light" },
-    { "keyword": "Yusuf", "halal_substitute": "bright ray of light" },
-    { "keyword": "Joseph", "halal_substitute": "bright ray of light" },
-    { "keyword": "Ayyub", "halal_substitute": "beam of light" },
-    { "keyword": "Job", "halal_substitute": "beam of light" },
-    { "keyword": "Shu‘ayb", "halal_substitute": "radiant glow" },
-    { "keyword": "Shuaib", "halal_substitute": "radiant glow" },
-    { "keyword": "Musa", "halal_substitute": "blazing light" },
-    { "keyword": "Moses", "halal_substitute": "blazing light" },
-    { "keyword": "Harun", "halal_substitute": "shining glow" },
-    { "keyword": "Aaron", "halal_substitute": "shining glow" },
-    { "keyword": "Dawud", "halal_substitute": "brilliant glow" },
-    { "keyword": "David", "halal_substitute": "brilliant glow" },
-    { "keyword": "Sulayman", "halal_substitute": "beam of light" },
-    { "keyword": "Solomon", "halal_substitute": "beam of light" },
-    { "keyword": "Ilyas", "halal_substitute": "radiant aura of light" },
-    { "keyword": "Elias", "halal_substitute": "radiant aura of light" },
-    { "keyword": "Elijah", "halal_substitute": "radiant aura of light" },
-    { "keyword": "Al-Yasa", "halal_substitute": "shining aura of light" },
-    { "keyword": "Elisha", "halal_substitute": "shining aura of light" },
-    { "keyword": "Dhul-Kifl", "halal_substitute": "bright aura of light" },
-    { "keyword": "Yahya", "halal_substitute": "gentle beam of light" },
-    { "keyword": "John", "halal_substitute": "gentle beam of light" },
-    { "keyword": "Zakariya", "halal_substitute": "soft ray of light" },
-    { "keyword": "Zechariah", "halal_substitute": "soft ray of light" },
-    { "keyword": "Yunus", "halal_substitute": "glowing light" },
-    { "keyword": "Jonah", "halal_substitute": "glowing light" },
-    { "keyword": "‘Isa", "halal_substitute": "pure beam of light" },
-    { "keyword": "Jesus", "halal_substitute": "pure beam of light" },
-    { "keyword": "Maryam", "halal_substitute": "dawn-like gentle light" },
-    { "keyword": "Mary", "halal_substitute": "dawn-like gentle light" },
-    { "keyword": "‘Imran", "halal_substitute": "soft radiant light" },
-    { "keyword": "Zayd", "halal_substitute": "bright light" },
-    { "keyword": "Luqman", "halal_substitute": "serene light pattern" },
-    { "keyword": "Dhul-Qarnayn", "halal_substitute": "pillar of light" },
-    { "keyword": "‘Uzair", "halal_substitute": "glimmering light" },
-    { "keyword": "Ezra", "halal_substitute": "glimmering light" },
-    { "keyword": "Camel", "halal_substitute": "swirling desert motif" },
-    { "keyword": "Cow", "halal_substitute": "abstract bovine pattern" },
-    { "keyword": "Cattle", "halal_substitute": "organic geometric texture" },
-    { "keyword": "Sheep", "halal_substitute": "flowing abstract wool pattern" },
-    { "keyword": "Goat", "halal_substitute": "curved minimalist pattern" },
-    { "keyword": "Horse", "halal_substitute": "abstract galloping pattern" },
-    { "keyword": "Donkey", "halal_substitute": "minimalist silhouette of a beast" },
-    { "keyword": "Bee", "halal_substitute": "golden hexagonal pattern" },
-    { "keyword": "Ant", "halal_substitute": "intricate network pattern" },
-    { "keyword": "Dog", "halal_substitute": "abstract loyal silhouette" },
-    { "keyword": "Elephant", "halal_substitute": "majestic swirling pattern" },
-    { "keyword": "Fish", "halal_substitute": "fluid organic wave pattern" },
-    { "keyword": "Whale", "halal_substitute": "deep oceanic swirl" },
-    { "keyword": "Bird", "halal_substitute": "feather-like abstract pattern" },
-    { "keyword": "Hoopoe", "halal_substitute": "vibrant wing-like swirl" },
-    { "keyword": "Ram", "halal_substitute": "spiral motif of sacrifice" },
-    { "keyword": "Camel Hump", "halal_substitute": "swirling abstract dune shape" },
-    { "keyword": "Cow Hide", "halal_substitute": "abstract textured leather pattern" },
-    { "keyword": "Sheep Wool", "halal_substitute": "flowing abstract woolen pattern" },
-    { "keyword": "Goat Horn", "halal_substitute": "curved abstract spiral pattern" },
-    { "keyword": "Horse Mane", "halal_substitute": "flowing abstract wave pattern" },
-    { "keyword": "Bird Wing", "halal_substitute": "feather-like abstract swirl" },
-    { "keyword": "Fish Scale", "halal_substitute": "iridescent abstract scale pattern" },
-    { "keyword": "Face", "halal_substitute": "ethereal mist of light" },
-    { "keyword": "Hand", "halal_substitute": "gentle emanating glow" },
-    { "keyword": "Foot", "halal_substitute": "abstract step pattern" },
-    { "keyword": "Eye", "halal_substitute": "radiant luminous orb" },
-    { "keyword": "Hair", "halal_substitute": "flowing abstract strand" }
+    {
+      "keyword": "Allah",
+      "halal_substitute": "Islamic calligraphy pattern (Allah’s name)"
+    },
+    {
+      "keyword": "God",
+      "halal_substitute": "radiant burst of light"
+    },
+    {
+      "keyword": "Lord",
+      "halal_substitute": "shining celestial light"
+    },
+    {
+      "keyword": "Muhammad",
+      "halal_substitute": "radiant beam of light"
+    },
+    {
+      "keyword": "Ahmad",
+      "halal_substitute": "glowing beam of light"
+    },
+    {
+      "keyword": "Adam",
+      "halal_substitute": "brilliant ray of light"
+    },
+    {
+      "keyword": "Idris",
+      "halal_substitute": "luminous ray of light"
+    },
+    {
+      "keyword": "Enoch",
+      "halal_substitute": "luminous ray of light"
+    },
+    {
+      "keyword": "Nuh",
+      "halal_substitute": "shining pillar of light"
+    },
+    {
+      "keyword": "Noah",
+      "halal_substitute": "shining pillar of light"
+    },
+    {
+      "keyword": "Hud",
+      "halal_substitute": "radiant light"
+    },
+    {
+      "keyword": "Salih",
+      "halal_substitute": "bright beam of light"
+    },
+    {
+      "keyword": "Saleh",
+      "halal_substitute": "bright beam of light"
+    },
+    {
+      "keyword": "Ibrahim",
+      "halal_substitute": "glowing light"
+    },
+    {
+      "keyword": "Abraham",
+      "halal_substitute": "glowing light"
+    },
+    {
+      "keyword": "Lut",
+      "halal_substitute": "beam of pure light"
+    },
+    {
+      "keyword": "Lot",
+      "halal_substitute": "beam of pure light"
+    },
+    {
+      "keyword": "Ismail",
+      "halal_substitute": "brilliant light"
+    },
+    {
+      "keyword": "Ishmael",
+      "halal_substitute": "brilliant light"
+    },
+    {
+      "keyword": "Ishaq",
+      "halal_substitute": "radiant light"
+    },
+    {
+      "keyword": "Isaac",
+      "halal_substitute": "radiant light"
+    },
+    {
+      "keyword": "Ya‘qub",
+      "halal_substitute": "shining light"
+    },
+    {
+      "keyword": "Jacob",
+      "halal_substitute": "shining light"
+    },
+    {
+      "keyword": "Yusuf",
+      "halal_substitute": "bright ray of light"
+    },
+    {
+      "keyword": "Joseph",
+      "halal_substitute": "bright ray of light"
+    },
+    {
+      "keyword": "Ayyub",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "Job",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "Shu‘ayb",
+      "halal_substitute": "radiant glow"
+    },
+    {
+      "keyword": "Shuaib",
+      "halal_substitute": "radiant glow"
+    },
+    {
+      "keyword": "Musa",
+      "halal_substitute": "blazing light"
+    },
+    {
+      "keyword": "Moses",
+      "halal_substitute": "blazing light"
+    },
+    {
+      "keyword": "Harun",
+      "halal_substitute": "shining glow"
+    },
+    {
+      "keyword": "Aaron",
+      "halal_substitute": "shining glow"
+    },
+    {
+      "keyword": "Dawud",
+      "halal_substitute": "brilliant glow"
+    },
+    {
+      "keyword": "David",
+      "halal_substitute": "brilliant glow"
+    },
+    {
+      "keyword": "Sulayman",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "Solomon",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "Ilyas",
+      "halal_substitute": "radiant aura of light"
+    },
+    {
+      "keyword": "Elias",
+      "halal_substitute": "radiant aura of light"
+    },
+    {
+      "keyword": "Elijah",
+      "halal_substitute": "radiant aura of light"
+    },
+    {
+      "keyword": "Al-Yasa",
+      "halal_substitute": "shining aura of light"
+    },
+    {
+      "keyword": "Elisha",
+      "halal_substitute": "shining aura of light"
+    },
+    {
+      "keyword": "Dhul-Kifl",
+      "halal_substitute": "bright aura of light"
+    },
+    {
+      "keyword": "Yahya",
+      "halal_substitute": "gentle beam of light"
+    },
+    {
+      "keyword": "John",
+      "halal_substitute": "gentle beam of light"
+    },
+    {
+      "keyword": "Zakariya",
+      "halal_substitute": "soft ray of light"
+    },
+    {
+      "keyword": "Zechariah",
+      "halal_substitute": "soft ray of light"
+    },
+    {
+      "keyword": "Yunus",
+      "halal_substitute": "glowing light"
+    },
+    {
+      "keyword": "Jonah",
+      "halal_substitute": "glowing light"
+    },
+    {
+      "keyword": "‘Isa",
+      "halal_substitute": "pure beam of light"
+    },
+    {
+      "keyword": "Jesus",
+      "halal_substitute": "pure beam of light"
+    },
+    {
+      "keyword": "Maryam",
+      "halal_substitute": "dawn-like gentle light"
+    },
+    {
+      "keyword": "Mary",
+      "halal_substitute": "dawn-like gentle light"
+    },
+    {
+      "keyword": "‘Imran",
+      "halal_substitute": "soft radiant light"
+    },
+    {
+      "keyword": "Zayd",
+      "halal_substitute": "bright light"
+    },
+    {
+      "keyword": "Luqman",
+      "halal_substitute": "serene light pattern"
+    },
+    {
+      "keyword": "Dhul-Qarnayn",
+      "halal_substitute": "pillar of light"
+    },
+    {
+      "keyword": "‘Uzair",
+      "halal_substitute": "glimmering light"
+    },
+    {
+      "keyword": "Ezra",
+      "halal_substitute": "glimmering light"
+    },
+    {
+      "keyword": "Camel",
+      "halal_substitute": "swirling desert motif"
+    },
+    {
+      "keyword": "Cow",
+      "halal_substitute": "abstract bovine pattern"
+    },
+    {
+      "keyword": "Cattle",
+      "halal_substitute": "organic geometric texture"
+    },
+    {
+      "keyword": "Sheep",
+      "halal_substitute": "flowing abstract wool pattern"
+    },
+    {
+      "keyword": "Goat",
+      "halal_substitute": "curved minimalist pattern"
+    },
+    {
+      "keyword": "Horse",
+      "halal_substitute": "abstract galloping pattern"
+    },
+    {
+      "keyword": "Donkey",
+      "halal_substitute": "minimalist silhouette of a beast"
+    },
+    {
+      "keyword": "Bee",
+      "halal_substitute": "golden hexagonal pattern"
+    },
+    {
+      "keyword": "Ant",
+      "halal_substitute": "intricate network pattern"
+    },
+    {
+      "keyword": "Dog",
+      "halal_substitute": "abstract loyal silhouette"
+    },
+    {
+      "keyword": "Elephant",
+      "halal_substitute": "majestic swirling pattern"
+    },
+    {
+      "keyword": "Fish",
+      "halal_substitute": "fluid organic wave pattern"
+    },
+    {
+      "keyword": "Whale",
+      "halal_substitute": "deep oceanic swirl"
+    },
+    {
+      "keyword": "Bird",
+      "halal_substitute": "feather-like abstract pattern"
+    },
+    {
+      "keyword": "Hoopoe",
+      "halal_substitute": "vibrant wing-like swirl"
+    },
+    {
+      "keyword": "Ram",
+      "halal_substitute": "spiral motif of sacrifice"
+    },
+    {
+      "keyword": "Camel Hump",
+      "halal_substitute": "swirling abstract dune shape"
+    },
+    {
+      "keyword": "Cow Hide",
+      "halal_substitute": "abstract textured leather pattern"
+    },
+    {
+      "keyword": "Sheep Wool",
+      "halal_substitute": "flowing abstract woolen pattern"
+    },
+    {
+      "keyword": "Goat Horn",
+      "halal_substitute": "curved abstract spiral pattern"
+    },
+    {
+      "keyword": "Horse Mane",
+      "halal_substitute": "flowing abstract wave pattern"
+    },
+    {
+      "keyword": "Bird Wing",
+      "halal_substitute": "feather-like abstract swirl"
+    },
+    {
+      "keyword": "Fish Scale",
+      "halal_substitute": "iridescent abstract scale pattern"
+    },
+    {
+      "keyword": "Face",
+      "halal_substitute": "ethereal mist of light"
+    },
+    {
+      "keyword": "Hand",
+      "halal_substitute": "gentle emanating glow"
+    },
+    {
+      "keyword": "Foot",
+      "halal_substitute": "abstract step pattern"
+    },
+    {
+      "keyword": "Eye",
+      "halal_substitute": "radiant luminous orb"
+    },
+    {
+      "keyword": "Hair",
+      "halal_substitute": "flowing abstract strand"
+    }
   ],
   "FORBIDDEN_SPIRITUAL_WORDS": [
-    { "keyword": "Angel", "halal_substitute": "pillar of light" },
-    { "keyword": "Angels", "halal_substitute": "multiple celestial lights" },
-    { "keyword": "Gabriel", "halal_substitute": "radiant beam of light" },
-    { "keyword": "Jibril", "halal_substitute": "radiant aura of light" },
-    { "keyword": "Michael", "halal_substitute": "glowing pillar of light" },
-    { "keyword": "Mikail", "halal_substitute": "glowing aura of light" },
-    { "keyword": "Harut", "halal_substitute": "ray of light" },
-    { "keyword": "Marut", "halal_substitute": "ray of light" },
-    { "keyword": "Malik", "halal_substitute": "bright glow of light" },
-    { "keyword": "Holy Spirit", "halal_substitute": "sacred white light" },
-    { "keyword": "Ruh al-Qudus", "halal_substitute": "sacred white light" },
-    { "keyword": "Angel of Death", "halal_substitute": "pale soft light" },
-    { "keyword": "Malak al-Mawt", "halal_substitute": "pale soft light" },
-    { "keyword": "Jinn", "halal_substitute": "swirling column of smoke" },
-    { "keyword": "Jinns", "halal_substitute": "swirling columns of smoke" },
-    { "keyword": "Face of Allah", "halal_substitute": "blinding formless light" },
-    { "keyword": "Hand of Allah", "halal_substitute": "outpouring radiant light" },
-    { "keyword": "Wings of Angels", "halal_substitute": "glowing halo aura" },
-    { "keyword": "Face of an Angel", "halal_substitute": "soft radiant glow" },
-    { "keyword": "Hands of an Angel", "halal_substitute": "gentle emanating light" },
-    { "keyword": "spiritual entities", "halal_substitute": "beam of light" },
-    { "keyword": "prophets", "halal_substitute": "beam of light" },
-    { "keyword": "symbols", "halal_substitute": "beam of light" },
-    { "keyword": "religious symbols", "halal_substitute": "beam of light" },
-    { "keyword": "God", "halal_substitute": "beam of light" },
-    { "keyword": "Gods", "halal_substitute": "beam of light" }
+    {
+      "keyword": "Angel",
+      "halal_substitute": "pillar of light"
+    },
+    {
+      "keyword": "Angels",
+      "halal_substitute": "multiple celestial lights"
+    },
+    {
+      "keyword": "Gabriel",
+      "halal_substitute": "radiant beam of light"
+    },
+    {
+      "keyword": "Jibril",
+      "halal_substitute": "radiant aura of light"
+    },
+    {
+      "keyword": "Michael",
+      "halal_substitute": "glowing pillar of light"
+    },
+    {
+      "keyword": "Mikail",
+      "halal_substitute": "glowing aura of light"
+    },
+    {
+      "keyword": "Harut",
+      "halal_substitute": "ray of light"
+    },
+    {
+      "keyword": "Marut",
+      "halal_substitute": "ray of light"
+    },
+    {
+      "keyword": "Malik",
+      "halal_substitute": "bright glow of light"
+    },
+    {
+      "keyword": "Holy Spirit",
+      "halal_substitute": "sacred white light"
+    },
+    {
+      "keyword": "Ruh al-Qudus",
+      "halal_substitute": "sacred white light"
+    },
+    {
+      "keyword": "Angel of Death",
+      "halal_substitute": "pale soft light"
+    },
+    {
+      "keyword": "Malak al-Mawt",
+      "halal_substitute": "pale soft light"
+    },
+    {
+      "keyword": "Jinn",
+      "halal_substitute": "swirling column of smoke"
+    },
+    {
+      "keyword": "Jinns",
+      "halal_substitute": "swirling columns of smoke"
+    },
+    {
+      "keyword": "Face of Allah",
+      "halal_substitute": "blinding formless light"
+    },
+    {
+      "keyword": "Hand of Allah",
+      "halal_substitute": "outpouring radiant light"
+    },
+    {
+      "keyword": "Wings of Angels",
+      "halal_substitute": "glowing halo aura"
+    },
+    {
+      "keyword": "Face of an Angel",
+      "halal_substitute": "soft radiant glow"
+    },
+    {
+      "keyword": "Hands of an Angel",
+      "halal_substitute": "gentle emanating light"
+    },
+    {
+      "keyword": "spiritual entities",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "prophets",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "symbols",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "religious symbols",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "God",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "Gods",
+      "halal_substitute": "beam of light"
+    }
   ],
   "ALLOWED_CATEGORIES": [
     "Natural Landscapes",
@@ -178,3 +643,4 @@
     "Islamic Culture Objects"
   ]
 }
+
