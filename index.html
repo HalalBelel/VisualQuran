@@ -53,13 +53,13 @@
       </div>
     </form>
     
-    <h2>Raw Output</h2>
+    <h2>Step 1. Replacing forbidden words</h2>
     <div id="rawOutput" class="output"></div>
     
-    <h2>AI Review of Text Prompt</h2>
+    <h2>Step 2. AI checking if the text is halal</h2>
     <div id="reviewedOutput" class="output"></div>
     
-    <h2>Keyword review of Output</h2>
+    <h2>Step 3. Final replacement of forbidden words, then generating image</h2>
     <div id="verifiedOutput" class="output"></div>
     
     <h2>Generated Images (From Stable Diffusion)</h2>
@@ -408,48 +408,51 @@
         conversation.push({ role: "assistant", content: substitutedRaw });
         
         const reviewResponse = await verifyPrompt(substitutedRaw);
-        // Apply keyword substitution to the review response.
-        let substitutedReview = applyKeywordSubstitutions(reviewResponse);
-        document.getElementById("reviewedOutput").innerText = substitutedReview;
+        // Display the full AI review in Step 2.
+        document.getElementById("reviewedOutput").innerText = reviewResponse;
         
-        let finalReviewedText;
-        const normalizedReview = substitutedReview.trim().replace(/\.$/, "");
-        if (normalizedReview.startsWith("No")) {
-          document.getElementById("verifiedOutput").innerText = "Error: " + substitutedReview;
-          return;
-        } else if (normalizedReview.includes("Review Passed")) {
-          finalReviewedText = substitutedRaw;
-          document.getElementById("verifiedOutput").innerText = "Review Passed";
-        } else if (normalizedReview === "Connection Error: Please regenerate prompt") {
-          document.getElementById("verifiedOutput").innerText = "Connection Error: Please regenerate prompt";
-          return;
-        } else if (normalizedReview !== "") {
-          finalReviewedText = substitutedReview;
-          document.getElementById("verifiedOutput").innerText = finalReviewedText;
+        // Determine final output based on the review response.
+        let finalOutput = "";
+        let trimmedReview = reviewResponse.trim();
+        if (trimmedReview === "Review Passed") {
+          // Use the raw substituted text if review is exactly "Review Passed"
+          finalOutput = substitutedRaw;
+        } else if (trimmedReview.indexOf("The updated prompt is as follows:") === 0) {
+          // Remove the phrase and use the remainder
+          finalOutput = trimmedReview.substring("The updated prompt is as follows:".length).trim();
         } else {
-          finalReviewedText = substitutedRaw;
-          document.getElementById("verifiedOutput").innerText = "Review Passed";
+          // Any other response is treated as a connection error.
+          finalOutput = "Connection error: Please regenerate prompt";
+          document.getElementById("verifiedOutput").innerText = finalOutput;
+          return;
         }
         
-        const finalNumbered = forcePrefillNaming(finalReviewedText, surah, verse, batch);
+        // Apply final keyword substitution (if needed) to the final output.
+        finalOutput = applyKeywordSubstitutions(finalOutput);
+        document.getElementById("verifiedOutput").innerText = finalOutput;
+        
+        // Prepare negative prompt string from forbidden keywords.
         const negativePromptString = [].concat(
           config.FORBIDDEN_EVIL_WORDS.map(item => item.keyword),
           config.FORBIDDEN_NEUTRAL_WORDS.map(item => item.keyword),
           config.FORBIDDEN_SPIRITUAL_WORDS.map(item => item.keyword)
         ).join(", ");
         
-        if (containsForbiddenWords(finalNumbered)) {
-          const found = getForbiddenWords(finalNumbered);
+        // Check for any forbidden words (should not happen if substitutions are correct)
+        if (containsForbiddenWords(finalOutput)) {
+          const found = getForbiddenWords(finalOutput);
           document.getElementById("verifiedOutput").innerText =
             "Sorry forbidden words (" + found.join(", ") + ") were found, please click generate prompt again and report to info@onewordquran.com";
           return;
         }
         
+        // Finally, ensure the final output is prefixed correctly.
+        const finalNumbered = forcePrefillNaming(finalOutput, surah, verse, batch);
         await sendToStableDiffusion(finalNumbered, negativePromptString);
       } catch (error) {
         console.error("Error:", error);
         if (error.toString().toLowerCase().includes("connection")) {
-          document.getElementById("rawOutput").innerText = "Connection Error: Please regenerate prompt";
+          document.getElementById("rawOutput").innerText = "Connection error: Please regenerate prompt";
         } else {
           document.getElementById("rawOutput").innerText = "Error generating prompts.";
         }
