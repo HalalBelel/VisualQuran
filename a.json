@@ -17,7 +17,7 @@
     },
     {
       "keyword": "Devils",
-      "halal_substitute": "whirling dark shadows"
+      "halal_substitute": "whirlwind of dark smoke"
     },
     {
       "keyword": "Demon",
@@ -32,7 +32,15 @@
       "halal_substitute": "whirlwind of dark smoke"
     },
     {
+      "keyword": "Satans",
+      "halal_substitute": "whirlwind of dark smoke"
+    },
+    {
       "keyword": "Shaytan",
+      "halal_substitute": "storm of dark smoke"
+    },
+    {
+      "keyword": "Shaytans",
       "halal_substitute": "storm of dark smoke"
     },
     {
@@ -40,7 +48,15 @@
       "halal_substitute": "storm of dark smoke"
     },
     {
+      "keyword": "Shaitans",
+      "halal_substitute": "storm of dark smoke"
+    },
+    {
       "keyword": "Iblis",
+      "halal_substitute": "billowing black smoke"
+    },
+    {
+      "keyword": "Iblises",
       "halal_substitute": "billowing black smoke"
     },
     {
@@ -48,7 +64,15 @@
       "halal_substitute": "shattered stone fragments"
     },
     {
+      "keyword": "Baals",
+      "halal_substitute": "shattered stone fragments"
+    },
+    {
       "keyword": "Pharaoh",
+      "halal_substitute": "ancient deserted ruins"
+    },
+    {
+      "keyword": "Pharaohs",
       "halal_substitute": "ancient deserted ruins"
     },
     {
@@ -56,7 +80,15 @@
       "halal_substitute": "ruined palace stones"
     },
     {
+      "keyword": "Hamans",
+      "halal_substitute": "ruined palace stones"
+    },
+    {
       "keyword": "Jalut",
+      "halal_substitute": "broken armor pieces"
+    },
+    {
+      "keyword": "Jaluts",
       "halal_substitute": "broken armor pieces"
     },
     {
@@ -64,7 +96,15 @@
       "halal_substitute": "broken armor pieces"
     },
     {
+      "keyword": "Goliaths",
+      "halal_substitute": "broken armor pieces"
+    },
+    {
       "keyword": "Qarun",
+      "halal_substitute": "cracked earth ground"
+    },
+    {
+      "keyword": "Qaruns",
       "halal_substitute": "cracked earth ground"
     },
     {
@@ -72,7 +112,15 @@
       "halal_substitute": "cracked earth ground"
     },
     {
+      "keyword": "Korahs",
+      "halal_substitute": "cracked earth ground"
+    },
+    {
       "keyword": "As-Samiri",
+      "halal_substitute": "scattered golden dust"
+    },
+    {
+      "keyword": "As-Samiris",
       "halal_substitute": "scattered golden dust"
     },
     {
@@ -80,7 +128,15 @@
       "halal_substitute": "scattered golden dust"
     },
     {
+      "keyword": "the Samaritans",
+      "halal_substitute": "scattered golden dust"
+    },
+    {
       "keyword": "Azar",
+      "halal_substitute": "broken idol stone"
+    },
+    {
+      "keyword": "Azars",
       "halal_substitute": "broken idol stone"
     },
     {
@@ -88,7 +144,15 @@
       "halal_substitute": "blazing flame"
     },
     {
+      "keyword": "Abu Lahabs",
+      "halal_substitute": "blazing flame"
+    },
+    {
       "keyword": "Taghut",
+      "halal_substitute": "shattered idol statue"
+    },
+    {
+      "keyword": "Taghuts",
       "halal_substitute": "shattered idol statue"
     },
     {
@@ -96,7 +160,15 @@
       "halal_substitute": "dark mist"
     },
     {
+      "keyword": "Jibts",
+      "halal_substitute": "dark mist"
+    },
+    {
       "keyword": "Wadd",
+      "halal_substitute": "shattered stone"
+    },
+    {
+      "keyword": "Wadds",
       "halal_substitute": "shattered stone"
     },
     {
@@ -104,7 +176,15 @@
       "halal_substitute": "cracked stone"
     },
     {
+      "keyword": "Suwa‘s",
+      "halal_substitute": "cracked stone"
+    },
+    {
       "keyword": "Yaghuth",
+      "halal_substitute": "broken stone"
+    },
+    {
+      "keyword": "Yaghuths",
       "halal_substitute": "broken stone"
     },
     {
@@ -112,7 +192,15 @@
       "halal_substitute": "crumbled stone"
     },
     {
+      "keyword": "Ya‘uqs",
+      "halal_substitute": "crumbled stone"
+    },
+    {
       "keyword": "Nasr",
+      "halal_substitute": "ruined stone"
+    },
+    {
+      "keyword": "Nasrs",
       "halal_substitute": "ruined stone"
     },
     {
@@ -120,7 +208,15 @@
       "halal_substitute": "smashed stone"
     },
     {
+      "keyword": "Al-Lats",
+      "halal_substitute": "smashed stone"
+    },
+    {
       "keyword": "Al-‘Uzza",
+      "halal_substitute": "broken rock"
+    },
+    {
+      "keyword": "Al-‘Uzzas",
       "halal_substitute": "broken rock"
     },
     {
@@ -128,7 +224,15 @@
       "halal_substitute": "shattered rock"
     },
     {
+      "keyword": "Manats",
+      "halal_substitute": "shattered rock"
+    },
+    {
       "keyword": "Golden Calf",
+      "halal_substitute": "molten gold form"
+    },
+    {
+      "keyword": "Golden Calves",
       "halal_substitute": "molten gold form"
     },
     {
@@ -152,32 +256,64 @@
       "halal_substitute": "delicate carved forms"
     },
     {
+      "keyword": "figurine",
+      "halal_substitute": "delicate carved forms"
+    },
+    {
       "keyword": "carvings",
       "halal_substitute": "intricate stone carvings"
+    },
+    {
+      "keyword": "carving",
+      "halal_substitute": "intricate stone carving"
     },
     {
       "keyword": "sculptures",
       "halal_substitute": "abstract stone forms"
     },
     {
+      "keyword": "sculpture",
+      "halal_substitute": "abstract stone form"
+    },
+    {
       "keyword": "effigies",
       "halal_substitute": "broken effigy fragments"
+    },
+    {
+      "keyword": "effigy",
+      "halal_substitute": "broken effigy fragment"
     },
     {
       "keyword": "crafted likenesses",
       "halal_substitute": "handcrafted stone fragments"
     },
     {
+      "keyword": "crafted likeness",
+      "halal_substitute": "handcrafted stone fragment"
+    },
+    {
       "keyword": "objects of idol worship",
       "halal_substitute": "sacred geometric patterns"
+    },
+    {
+      "keyword": "object of idol worship",
+      "halal_substitute": "sacred geometric pattern"
     },
     {
       "keyword": "satanic symbols",
       "halal_substitute": "ominous dark motifs"
     },
     {
+      "keyword": "satanic symbol",
+      "halal_substitute": "ominous dark motif"
+    },
+    {
       "keyword": "crosses",
       "halal_substitute": "intersecting shadow lines"
+    },
+    {
+      "keyword": "cross",
+      "halal_substitute": "intersecting shadow line"
     }
   ],
   "FORBIDDEN_NEUTRAL_WORDS": [
@@ -422,7 +558,15 @@
       "halal_substitute": "swirling desert motif"
     },
     {
+      "keyword": "Camels",
+      "halal_substitute": "swirling desert motif"
+    },
+    {
       "keyword": "Cow",
+      "halal_substitute": "abstract bovine pattern"
+    },
+    {
+      "keyword": "Cows",
       "halal_substitute": "abstract bovine pattern"
     },
     {
@@ -438,7 +582,15 @@
       "halal_substitute": "curved minimalist pattern"
     },
     {
+      "keyword": "Goats",
+      "halal_substitute": "curved minimalist pattern"
+    },
+    {
       "keyword": "Horse",
+      "halal_substitute": "abstract galloping pattern"
+    },
+    {
+      "keyword": "Horses",
       "halal_substitute": "abstract galloping pattern"
     },
     {
@@ -446,7 +598,15 @@
       "halal_substitute": "minimalist silhouette of a beast"
     },
     {
+      "keyword": "Donkeys",
+      "halal_substitute": "minimalist silhouette of a beast"
+    },
+    {
       "keyword": "Bee",
+      "halal_substitute": "golden hexagonal pattern"
+    },
+    {
+      "keyword": "Bees",
       "halal_substitute": "golden hexagonal pattern"
     },
     {
@@ -454,7 +614,15 @@
       "halal_substitute": "intricate network pattern"
     },
     {
+      "keyword": "Ants",
+      "halal_substitute": "intricate network pattern"
+    },
+    {
       "keyword": "Dog",
+      "halal_substitute": "abstract loyal silhouette"
+    },
+    {
+      "keyword": "Dogs",
       "halal_substitute": "abstract loyal silhouette"
     },
     {
@@ -462,7 +630,15 @@
       "halal_substitute": "majestic swirling pattern"
     },
     {
+      "keyword": "Elephants",
+      "halal_substitute": "majestic swirling pattern"
+    },
+    {
       "keyword": "Fish",
+      "halal_substitute": "fluid organic wave pattern"
+    },
+    {
+      "keyword": "Fishes",
       "halal_substitute": "fluid organic wave pattern"
     },
     {
@@ -470,7 +646,15 @@
       "halal_substitute": "deep oceanic swirl"
     },
     {
+      "keyword": "Whales",
+      "halal_substitute": "deep oceanic swirl"
+    },
+    {
       "keyword": "Bird",
+      "halal_substitute": "feather-like abstract pattern"
+    },
+    {
+      "keyword": "Birds",
       "halal_substitute": "feather-like abstract pattern"
     },
     {
@@ -478,7 +662,15 @@
       "halal_substitute": "vibrant wing-like swirl"
     },
     {
+      "keyword": "Hoopoes",
+      "halal_substitute": "vibrant wing-like swirl"
+    },
+    {
       "keyword": "Ram",
+      "halal_substitute": "spiral motif of sacrifice"
+    },
+    {
+      "keyword": "Rams",
       "halal_substitute": "spiral motif of sacrifice"
     },
     {
@@ -486,7 +678,15 @@
       "halal_substitute": "swirling abstract dune shape"
     },
     {
+      "keyword": "Camel Humps",
+      "halal_substitute": "swirling abstract dune shape"
+    },
+    {
       "keyword": "Cow Hide",
+      "halal_substitute": "abstract textured leather pattern"
+    },
+    {
+      "keyword": "Cow Hides",
       "halal_substitute": "abstract textured leather pattern"
     },
     {
@@ -498,7 +698,15 @@
       "halal_substitute": "curved abstract spiral pattern"
     },
     {
+      "keyword": "Goat Horns",
+      "halal_substitute": "curved abstract spiral pattern"
+    },
+    {
       "keyword": "Horse Mane",
+      "halal_substitute": "flowing abstract wave pattern"
+    },
+    {
+      "keyword": "Horse Manes",
       "halal_substitute": "flowing abstract wave pattern"
     },
     {
@@ -506,7 +714,15 @@
       "halal_substitute": "feather-like abstract swirl"
     },
     {
+      "keyword": "Bird Wings",
+      "halal_substitute": "feather-like abstract swirl"
+    },
+    {
       "keyword": "Fish Scale",
+      "halal_substitute": "iridescent abstract scale pattern"
+    },
+    {
+      "keyword": "Fish Scales",
       "halal_substitute": "iridescent abstract scale pattern"
     },
     {
@@ -514,7 +730,15 @@
       "halal_substitute": "ethereal mist of light"
     },
     {
+      "keyword": "Faces",
+      "halal_substitute": "ethereal mist of light"
+    },
+    {
       "keyword": "Hand",
+      "halal_substitute": "gentle emanating glow"
+    },
+    {
+      "keyword": "Hands",
       "halal_substitute": "gentle emanating glow"
     },
     {
@@ -522,11 +746,23 @@
       "halal_substitute": "abstract step pattern"
     },
     {
+      "keyword": "Feet",
+      "halal_substitute": "abstract step pattern"
+    },
+    {
       "keyword": "Eye",
       "halal_substitute": "radiant luminous orb"
     },
     {
+      "keyword": "Eyes",
+      "halal_substitute": "radiant luminous orb"
+    },
+    {
       "keyword": "Hair",
+      "halal_substitute": "flowing abstract strand"
+    },
+    {
+      "keyword": "Hairs",
       "halal_substitute": "flowing abstract strand"
     }
   ],
@@ -580,6 +816,10 @@
       "halal_substitute": "pale soft light"
     },
     {
+      "keyword": "Angels of Death",
+      "halal_substitute": "pale soft light"
+    },
+    {
       "keyword": "Malak al-Mawt",
       "halal_substitute": "pale soft light"
     },
@@ -596,7 +836,15 @@
       "halal_substitute": "blinding formless light"
     },
     {
+      "keyword": "Faces of Allah",
+      "halal_substitute": "blinding formless light"
+    },
+    {
       "keyword": "Hand of Allah",
+      "halal_substitute": "outpouring radiant light"
+    },
+    {
+      "keyword": "Hands of Allah",
       "halal_substitute": "outpouring radiant light"
     },
     {
@@ -608,7 +856,15 @@
       "halal_substitute": "soft radiant glow"
     },
     {
+      "keyword": "Faces of an Angel",
+      "halal_substitute": "soft radiant glow"
+    },
+    {
       "keyword": "Hands of an Angel",
+      "halal_substitute": "gentle emanating light"
+    },
+    {
+      "keyword": "Hand of an Angel",
       "halal_substitute": "gentle emanating light"
     },
     {
@@ -616,7 +872,15 @@
       "halal_substitute": "beam of light"
     },
     {
+      "keyword": "spiritual entity",
+      "halal_substitute": "beam of light"
+    },
+    {
       "keyword": "prophets",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "prophet",
       "halal_substitute": "beam of light"
     },
     {
@@ -624,7 +888,15 @@
       "halal_substitute": "beam of light"
     },
     {
+      "keyword": "symbol",
+      "halal_substitute": "beam of light"
+    },
+    {
       "keyword": "religious symbols",
+      "halal_substitute": "beam of light"
+    },
+    {
+      "keyword": "religious symbol",
       "halal_substitute": "beam of light"
     },
     {
@@ -643,4 +915,3 @@
     "Islamic Culture Objects"
   ]
 }
-
