@@ -110,19 +110,55 @@
         result = result.replace("{ALLOWED_CATEGORIES}", config.ALLOWED_CATEGORIES.join(", "));
       }
       if (config.FORBIDDEN_EVIL_WORDS) {
-        result = result.replace("{FORBIDDEN_EVIL_WORDS}", config.FORBIDDEN_EVIL_WORDS.join(", "));
+        let keywords = config.FORBIDDEN_EVIL_WORDS.map(item => item.keyword);
+        result = result.replace("{FORBIDDEN_EVIL_WORDS}", keywords.join(", "));
       }
       if (config.FORBIDDEN_NEUTRAL_WORDS) {
-        result = result.replace("{FORBIDDEN_NEUTRAL_WORDS}", config.FORBIDDEN_NEUTRAL_WORDS.join(", "));
+        let keywords = config.FORBIDDEN_NEUTRAL_WORDS.map(item => item.keyword);
+        result = result.replace("{FORBIDDEN_NEUTRAL_WORDS}", keywords.join(", "));
       }
       if (config.FORBIDDEN_SPIRITUAL_WORDS) {
-        result = result.replace("{FORBIDDEN_SPIRITUAL_WORDS}", config.FORBIDDEN_SPIRITUAL_WORDS.join(", "));
+        let keywords = config.FORBIDDEN_SPIRITUAL_WORDS.map(item => item.keyword);
+        result = result.replace("{FORBIDDEN_SPIRITUAL_WORDS}", keywords.join(", "));
       }
       return result;
     }
     
+    // New function to apply keyword substitutions based on the mappings in config
+    function applyKeywordSubstitutions(text) {
+      if (config.FORBIDDEN_EVIL_WORDS && Array.isArray(config.FORBIDDEN_EVIL_WORDS)) {
+        config.FORBIDDEN_EVIL_WORDS.forEach(item => {
+          let regex = new RegExp("\\b" + item.keyword + "\\b", "gi");
+          text = text.replace(regex, item.halal_substitute);
+        });
+      }
+      if (config.FORBIDDEN_NEUTRAL_WORDS && Array.isArray(config.FORBIDDEN_NEUTRAL_WORDS)) {
+        config.FORBIDDEN_NEUTRAL_WORDS.forEach(item => {
+          let regex = new RegExp("\\b" + item.keyword + "\\b", "gi");
+          text = text.replace(regex, item.halal_substitute);
+        });
+      }
+      if (config.FORBIDDEN_SPIRITUAL_WORDS && Array.isArray(config.FORBIDDEN_SPIRITUAL_WORDS)) {
+        config.FORBIDDEN_SPIRITUAL_WORDS.forEach(item => {
+          let regex = new RegExp("\\b" + item.keyword + "\\b", "gi");
+          text = text.replace(regex, item.halal_substitute);
+        });
+      }
+      return text;
+    }
+    
+    // Updated functions to check for forbidden words based on object mappings
     function containsForbiddenWords(text) {
-      const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
+      let allForbidden = [];
+      if (config.FORBIDDEN_EVIL_WORDS && Array.isArray(config.FORBIDDEN_EVIL_WORDS)) {
+        allForbidden = allForbidden.concat(config.FORBIDDEN_EVIL_WORDS.map(item => item.keyword));
+      }
+      if (config.FORBIDDEN_NEUTRAL_WORDS && Array.isArray(config.FORBIDDEN_NEUTRAL_WORDS)) {
+        allForbidden = allForbidden.concat(config.FORBIDDEN_NEUTRAL_WORDS.map(item => item.keyword));
+      }
+      if (config.FORBIDDEN_SPIRITUAL_WORDS && Array.isArray(config.FORBIDDEN_SPIRITUAL_WORDS)) {
+        allForbidden = allForbidden.concat(config.FORBIDDEN_SPIRITUAL_WORDS.map(item => item.keyword));
+      }
       for (let word of allForbidden) {
         let regex = new RegExp("\\b" + word + "\\b", "i");
         if (regex.test(text)) return true;
@@ -131,7 +167,16 @@
     }
     
     function getForbiddenWords(text) {
-      const allForbidden = [].concat(config.FORBIDDEN_EVIL_WORDS, config.FORBIDDEN_NEUTRAL_WORDS, config.FORBIDDEN_SPIRITUAL_WORDS);
+      let allForbidden = [];
+      if (config.FORBIDDEN_EVIL_WORDS && Array.isArray(config.FORBIDDEN_EVIL_WORDS)) {
+        allForbidden = allForbidden.concat(config.FORBIDDEN_EVIL_WORDS.map(item => item.keyword));
+      }
+      if (config.FORBIDDEN_NEUTRAL_WORDS && Array.isArray(config.FORBIDDEN_NEUTRAL_WORDS)) {
+        allForbidden = allForbidden.concat(config.FORBIDDEN_NEUTRAL_WORDS.map(item => item.keyword));
+      }
+      if (config.FORBIDDEN_SPIRITUAL_WORDS && Array.isArray(config.FORBIDDEN_SPIRITUAL_WORDS)) {
+        allForbidden = allForbidden.concat(config.FORBIDDEN_SPIRITUAL_WORDS.map(item => item.keyword));
+      }
       let found = [];
       allForbidden.forEach(word => {
         let regex = new RegExp("\\b" + word + "\\b", "i");
@@ -355,39 +400,42 @@
         let rawText = Array.isArray(genData.content)
           ? genData.content.map(item => item.text).join("\n\n")
           : genData.content;
-        document.getElementById("rawOutput").innerText = rawText;
         
-        conversation.push({ role: "assistant", content: rawText });
+        // Apply keyword substitutions to the raw text before displaying and sending for verification.
+        let substitutedRaw = applyKeywordSubstitutions(rawText);
+        document.getElementById("rawOutput").innerText = substitutedRaw;
         
-        const reviewResponse = await verifyPrompt(rawText);
-        document.getElementById("reviewedOutput").innerText = reviewResponse;
+        conversation.push({ role: "assistant", content: substitutedRaw });
+        
+        const reviewResponse = await verifyPrompt(substitutedRaw);
+        // Apply keyword substitution to the review response.
+        let substitutedReview = applyKeywordSubstitutions(reviewResponse);
+        document.getElementById("reviewedOutput").innerText = substitutedReview;
         
         let finalReviewedText;
-        const normalizedReview = reviewResponse.trim().replace(/\.$/, "");
-        // If review response starts with "No", treat as an error.
+        const normalizedReview = substitutedReview.trim().replace(/\.$/, "");
         if (normalizedReview.startsWith("No")) {
-          document.getElementById("verifiedOutput").innerText = "Error: " + reviewResponse;
+          document.getElementById("verifiedOutput").innerText = "Error: " + substitutedReview;
           return;
         } else if (normalizedReview.includes("Review Passed")) {
-          finalReviewedText = rawText;
+          finalReviewedText = substitutedRaw;
           document.getElementById("verifiedOutput").innerText = "Review Passed";
         } else if (normalizedReview === "Connection Error: Please regenerate prompt") {
           document.getElementById("verifiedOutput").innerText = "Connection Error: Please regenerate prompt";
           return;
         } else if (normalizedReview !== "") {
-          finalReviewedText = reviewResponse;
+          finalReviewedText = substitutedReview;
           document.getElementById("verifiedOutput").innerText = finalReviewedText;
         } else {
-          finalReviewedText = rawText;
+          finalReviewedText = substitutedRaw;
           document.getElementById("verifiedOutput").innerText = "Review Passed";
         }
         
-        // Even though the verified output shows "Review Passed", use the full finalReviewedText for image generation.
         const finalNumbered = forcePrefillNaming(finalReviewedText, surah, verse, batch);
         const negativePromptString = [].concat(
-          config.FORBIDDEN_EVIL_WORDS,
-          config.FORBIDDEN_NEUTRAL_WORDS,
-          config.FORBIDDEN_SPIRITUAL_WORDS
+          config.FORBIDDEN_EVIL_WORDS.map(item => item.keyword),
+          config.FORBIDDEN_NEUTRAL_WORDS.map(item => item.keyword),
+          config.FORBIDDEN_SPIRITUAL_WORDS.map(item => item.keyword)
         ).join(", ");
         
         if (containsForbiddenWords(finalNumbered)) {
