@@ -82,7 +82,7 @@
       return num.toString().padStart(size, '0');
     }
     
-    // Updated forcePrefillNaming: if not enough prompts are returned, fill in with a default message.
+    // If not enough prompts are returned, fill in missing lines with a default message.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const delimiter = " ||| ";
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
@@ -118,8 +118,12 @@
     
     const debug = true;
     let conversation = [];
+    // Store final prompts for download
     window.generatedPrompts = [];
+    // Store the final base64 images
     window.generatedImages = [];
+    // Store the entire artifact metadata
+    window.generatedArtifacts = [];
     
     // --- Load Configuration ---
     let config = {};
@@ -127,7 +131,6 @@
       .then(response => response.json())
       .then(data => {
         config = data;
-        // Expand placeholders as needed
         if (debug) {
           document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(config, null, 2) + "\n\n";
         }
@@ -184,19 +187,22 @@
     
     // --- Send Prompt to Stability Diffusion ---
     async function sendToStableDiffusion(promptsArray, negativePrompt) {
-      // For each prompt, send an individual payload.
       for (let i = 0; i < promptsArray.length; i++) {
         let promptText = promptsArray[i].trim();
-        // Check if the prompt has content after the delimiter.
+        
+        // Skip if empty after the delimiter
         let parts = promptText.split(" ||| ");
         if (parts.length < 2 || parts[1].trim() === "") {
           document.getElementById("debugOutput").innerText += "Skipping empty prompt for: " + promptText + "\n\n";
           continue;
         }
-        // Trim if the text is too long.
+        
+        // Trim if too long
         if (promptText.length > 2000) {
           promptText = promptText.substring(0, 2000);
         }
+        
+        // Build the JSON payload
         const payload = {
           prompts: [promptText],
           negative_prompt: negativePrompt,
@@ -206,7 +212,8 @@
           steps: 30
         };
         
-        document.getElementById("debugOutput").innerText += "Stability Payload for prompt " + (i+1) + ":\n" + JSON.stringify(payload, null, 2) + "\n\n";
+        document.getElementById("debugOutput").innerText +=
+          "Stability Payload for prompt " + (i+1) + ":\n" + JSON.stringify(payload, null, 2) + "\n\n";
         
         try {
           let response = await fetch("https://visual-quran.vercel.app/api/stablediffusion", {
@@ -215,22 +222,42 @@
             body: JSON.stringify(payload)
           });
           let data = await response.json();
+          
+          // If success = false, log the error
           if (!data.success) {
-            document.getElementById("debugOutput").innerText += "Stability Error for prompt " + (i+1) + ":\n" + data.error + "\n\n";
-          } else if (data.artifacts && Array.isArray(data.artifacts)) {
-            data.artifacts.forEach(artifact => {
-              let imgUrl = `data:image/png;base64,${artifact.base64}`;
+            document.getElementById("debugOutput").innerText +=
+              "Stability Error for prompt " + (i+1) + ":\n" + data.error + "\n\n";
+          }
+          // If artifacts array returned, display images + metadata
+          else if (data.artifacts && Array.isArray(data.artifacts)) {
+            // Save the entire artifacts array for debugging/inspection
+            window.generatedArtifacts.push(...data.artifacts);
+            
+            data.artifacts.forEach((artifact, idx) => {
+              // Convert base64 to an image
+              const imgUrl = `data:image/png;base64,${artifact.base64}`;
               window.generatedImages.push(imgUrl);
-              let imageOutput = document.getElementById("imageOutput");
-              let img = document.createElement("img");
+              
+              // Append the image to the gallery
+              const imageOutput = document.getElementById("imageOutput");
+              const img = document.createElement("img");
               img.src = imgUrl;
               imageOutput.appendChild(img);
+              
+              // Print artifact metadata in debug
+              document.getElementById("debugOutput").innerText +=
+                "Artifact metadata (prompt " + (i+1) + ", artifact " + (idx+1) + "):\n" +
+                JSON.stringify(artifact, null, 2) + "\n\n";
             });
-          } else {
-            document.getElementById("debugOutput").innerText += "Unexpected Stability API response: " + JSON.stringify(data) + "\n\n";
+          }
+          else {
+            // Unexpected shape
+            document.getElementById("debugOutput").innerText +=
+              "Unexpected Stability API response: " + JSON.stringify(data) + "\n\n";
           }
         } catch (err) {
-          document.getElementById("debugOutput").innerText += "Error in Stability call for prompt " + (i+1) + ":\n" + err.toString() + "\n\n";
+          document.getElementById("debugOutput").innerText +=
+            "Error in Stability call for prompt " + (i+1) + ":\n" + err.toString() + "\n\n";
         }
       }
     }
@@ -248,23 +275,28 @@
           { role: "user", content: config.REVIEW_INSTRUCTIONS }
         ]
       };
-      document.getElementById("debugOutput").innerText += "Verification Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
+      document.getElementById("debugOutput").innerText +=
+        "Verification Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
+      
       const response = await fetch(config.VERCEL_PROXY_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
       const data = await response.json();
-      document.getElementById("debugOutput").innerText += "Verification API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
+      
+      document.getElementById("debugOutput").innerText +=
+        "Verification API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
+      
       if (!data.content) {
         throw new Error("No content in verification response");
       }
-      let reviewResponse = "";
-      if (Array.isArray(data.content)) {
-        reviewResponse = data.content.map(item => item.text).join("\n\n");
-      } else {
-        reviewResponse = data.content;
-      }
+      
+      // If data.content is an array, join all text blocks
+      let reviewResponse = Array.isArray(data.content)
+        ? data.content.map(item => item.text).join("\n\n")
+        : data.content;
+      
       return reviewResponse;
     }
     // --- End Verify Prompt ---
@@ -332,6 +364,11 @@
         return;
       }
       
+      // Clear out old results
+      window.generatedImages = [];
+      window.generatedArtifacts = [];
+      document.getElementById("imageOutput").innerHTML = "";
+      
       const expectedPrefill = config.PREFILL_TEMPLATE
         .replace("{SURAH_PADDED}", pad(surah, 3))
         .replace("{VERSE_PADDED}", pad(verse, 3))
@@ -362,32 +399,39 @@
         { role: "user", content: newUserInstruction }
       ];
       
-      document.getElementById("debugOutput").innerText += "Prompt Generation Payload Sent:\n" + JSON.stringify(generationPayload, null, 2) + "\n\n";
+      document.getElementById("debugOutput").innerText +=
+        "Prompt Generation Payload Sent:\n" + JSON.stringify(generationPayload, null, 2) + "\n\n";
+      
       document.getElementById("rawOutput").innerText = "Generating prompts...";
       document.getElementById("reviewedOutput").innerText = "";
       document.getElementById("verifiedOutput").innerText = "";
       
       try {
+        // 1) Generate raw prompts
         const genRes = await fetch(config.VERCEL_PROXY_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(generationPayload)
         });
         const genData = await genRes.json();
-        document.getElementById("debugOutput").innerText += "Generation API Response:\n" + JSON.stringify(genData, null, 2) + "\n\n";
+        
+        document.getElementById("debugOutput").innerText +=
+          "Generation API Response:\n" + JSON.stringify(genData, null, 2) + "\n\n";
+        
         if (!genData.content) {
           throw new Error("No content in generation response");
         }
+        
         let rawText = Array.isArray(genData.content)
           ? genData.content.map(item => item.text).join("\n\n")
           : genData.content;
         
-        let substitutedRaw = rawText; // Optionally apply keyword substitutions if needed.
-        document.getElementById("rawOutput").innerText = substitutedRaw;
+        document.getElementById("rawOutput").innerText = rawText;
         
-        conversation.push({ role: "assistant", content: substitutedRaw });
+        conversation.push({ role: "assistant", content: rawText });
         
-        const reviewResponse = await verifyPrompt(substitutedRaw);
+        // 2) Verify the raw prompts
+        const reviewResponse = await verifyPrompt(rawText);
         document.getElementById("reviewedOutput").innerText = reviewResponse;
         
         let trimmedReview = reviewResponse.trim();
@@ -400,25 +444,25 @@
           return;
         }
         
-        finalOutput = finalOutput; // Optionally apply substitutions.
         document.getElementById("verifiedOutput").innerText = finalOutput;
         
-        // Force the correct numbering using our updated function.
+        // 3) Force the correct numbering
         const finalNumbered = forcePrefillNaming(finalOutput, surah, verse, batch);
         window.generatedPrompts = finalNumbered.split("\n").filter(line => line.trim() !== "");
         
+        // 4) Build negative prompt
         const negativePromptString = [].concat(
           config.FORBIDDEN_EVIL_WORDS.map(item => item.keyword),
           config.FORBIDDEN_NEUTRAL_WORDS.map(item => item.keyword),
           config.FORBIDDEN_SPIRITUAL_WORDS.map(item => item.keyword)
         ).join(", ");
         
-        // Optionally check for forbidden words here.
-        
-        // Split final numbered prompts into an array and send each to Stability.
+        // 5) Send each prompt to Stability
         const promptLines = finalNumbered.split("\n").filter(line => line.trim() !== "");
         await sendToStableDiffusion(promptLines, negativePromptString);
+        
       } catch (error) {
+        console.error("Error:", error);
         document.getElementById("rawOutput").innerText = "Error generating prompts.";
         document.getElementById("debugOutput").innerText += "Error Details:\n" + error.toString() + "\n";
       }
