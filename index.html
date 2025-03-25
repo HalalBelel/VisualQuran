@@ -56,10 +56,10 @@
     <h2>Step 1. Replacing forbidden words</h2>
     <div id="rawOutput" class="output"></div>
     
-    <h2>Step 2. AI checking if the text is halal</h2>
+    <h2>Step 2. AI Checking if the Text is Halal</h2>
     <div id="reviewedOutput" class="output"></div>
     
-    <h2>Step 3. Final replacement of forbidden words, then generating image</h2>
+    <h2>Step 3. Final Replacement & Image Generation</h2>
     <div id="verifiedOutput" class="output"></div>
     
     <h2>Generated Images (From Stable Diffusion)</h2>
@@ -291,13 +291,14 @@
     }
     // --- End Send Prompt ---
     
-    // --- Verify Prompt ---
+    // --- Verify Prompt with Prefill ---
     async function verifyPrompt(rawText) {
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
         system: config.SYSTEM_ROLE,
+        prefill: config.PREFILL_TEMPLATE,
         messages: [
           { role: "assistant", content: rawText },
           { role: "user", content: config.REVIEW_INSTRUCTIONS }
@@ -407,18 +408,7 @@
         const reviewResponse = await verifyPrompt(substitutedRaw);
         document.getElementById("reviewedOutput").innerText = reviewResponse;
         
-        let finalOutput = "";
-        let trimmedReview = reviewResponse.trim();
-        if (trimmedReview === "Review Passed") {
-          finalOutput = substitutedRaw;
-        } else if (trimmedReview.indexOf("The updated prompt is as follows:") === 0) {
-          finalOutput = trimmedReview.substring("The updated prompt is as follows:".length).trim();
-        } else {
-          finalOutput = "Connection error: Please regenerate prompt";
-          document.getElementById("verifiedOutput").innerText = finalOutput;
-          return;
-        }
-        
+        let finalOutput = reviewResponse.trim();
         finalOutput = applyKeywordSubstitutions(finalOutput);
         document.getElementById("verifiedOutput").innerText = finalOutput;
         
