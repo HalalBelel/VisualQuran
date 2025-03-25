@@ -49,10 +49,10 @@
       </div>
     </form>
     
-    <h2>Step 1. Replacing forbidden words</h2>
+    <h2>Step 1. Replacing Forbidden Words</h2>
     <div id="rawOutput" class="output"></div>
     
-    <h2>Step 2. AI Checking if the Text is Halal</h2>
+    <h2>Step 2. AI Halal Verification</h2>
     <div id="reviewedOutput" class="output"></div>
     
     <h2>Step 3. Final Output & Image Generation</h2>
@@ -120,7 +120,6 @@
       return result;
     }
     
-    // Apply keyword substitutions based on the config.
     function applyKeywordSubstitutions(text) {
       if (config.FORBIDDEN_EVIL_WORDS && Array.isArray(config.FORBIDDEN_EVIL_WORDS)) {
         config.FORBIDDEN_EVIL_WORDS.forEach(item => {
@@ -413,19 +412,17 @@
         const reviewResponse = await verifyPrompt(substitutedRaw);
         document.getElementById("reviewedOutput").innerText = reviewResponse;
         
-        let finalOutput = "";
         let trimmedReview = reviewResponse.trim();
-        if (trimmedReview === "Review Passed") {
-          finalOutput = substitutedRaw;
-        } else if (trimmedReview.indexOf("The updated prompt is as follows:") === 0) {
-          finalOutput = trimmedReview.substring("The updated prompt is as follows:".length).trim();
+        // Check if the first 6 characters are digits; if not, treat as connection error.
+        if (/^\d{6}/.test(trimmedReview)) {
+          finalOutput = trimmedReview;
         } else {
           finalOutput = "Connection error: Please regenerate prompt";
           document.getElementById("verifiedOutput").innerText = finalOutput;
           return;
         }
         
-        finalOutput = applyKeywordSubstitutions(finalOutput);
+        let finalOutput = applyKeywordSubstitutions(trimmedReview);
         document.getElementById("verifiedOutput").innerText = finalOutput;
         
         const negativePromptString = [].concat(
