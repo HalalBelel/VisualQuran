@@ -103,6 +103,11 @@
       return corrected.join("\n");
     }
     
+    // Remove "Negative prompt:" part from the append parameters.
+    function cleanAppendParams(params) {
+      return params.replace(/^Negative prompt:.*?\. /i, "");
+    }
+    
     function appendParameters(text, params) {
       const lines = text.split("\n").filter(line => line.trim() !== "");
       return lines.map(line => line.trim() + " " + params).join("\n");
@@ -128,7 +133,6 @@
       return result;
     }
     
-    // Apply keyword substitutions based on the configuration.
     function applyKeywordSubstitutions(text) {
       if (config.FORBIDDEN_EVIL_WORDS && Array.isArray(config.FORBIDDEN_EVIL_WORDS)) {
         config.FORBIDDEN_EVIL_WORDS.forEach(item => {
@@ -201,7 +205,6 @@
     
     const debug = true;
     let conversation = [];
-    // Globals to store final prompts and generated images for download
     window.generatedPrompts = [];
     window.generatedImages = [];
     
@@ -273,39 +276,56 @@
     });
     // --- End Update Verse Dropdown ---
     
-    // --- Send Prompt to Stable Diffusion ---
-    async function sendToStableDiffusion(promptText, negativePrompt) {
-      // Append the APPEND_PARAMS to each prompt line.
-      let finalText = appendParameters(promptText, config.APPEND_PARAMS);
-      // Prepare payload with the final text split into lines.
-      const prompts = finalText.split("\n").filter(line => line.trim() !== "");
-      const sdEndpoint = "https://visual-quran.vercel.app/api/stablediffusion";
-      const payload = { prompts, negative_prompt: negativePrompt };
+    // --- Send Prompt to Stability Diffusion ---
+    async function sendToStableDiffusion(promptsArray, negativePrompt) {
+      // Clean APPEND_PARAMS (remove negative prompt text)
+      let cleanedParams = cleanAppendParams(config.APPEND_PARAMS);
       
-      // Debug: output the Stability payload.
-      if (debug) {
-        document.getElementById("debugOutput").innerText += "Stability Payload:\n" + JSON.stringify(payload, null, 2) + "\n\n";
+      // Loop over each prompt and send separately
+      for (let i = 0; i < promptsArray.length; i++) {
+        let promptText = promptsArray[i].trim();
+        // Append cleaned parameters to the prompt text
+        promptText = promptText + " " + cleanedParams;
+        
+        // Prepare payload with a single prompt
+        const payload = {
+          text_prompts: [{ text: promptText }],
+          negative_prompt: negativePrompt,
+          cfg_scale: 9,
+          clip_guidance_preset: "FAST_BLUE",
+          samples: 1,
+          steps: 30
+        };
+        
+        if (debug) {
+          document.getElementById("debugOutput").innerText += "Stability Payload for prompt " + (i+1) + ":\n" + JSON.stringify(payload, null, 2) + "\n\n";
+        }
+        
+        try {
+          let response = await fetch("https://visual-quran.vercel.app/api/stablediffusion", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          let data = await response.json();
+          if (!data.success) {
+            console.error("Stability request failed for prompt " + (i+1) + ":", data.error);
+            document.getElementById("debugOutput").innerText += "Stability Error for prompt " + (i+1) + ":\n" + data.error + "\n\n";
+          } else {
+            data.artifacts.forEach(artifact => {
+              let imgUrl = `data:image/png;base64,${artifact.base64}`;
+              window.generatedImages.push(imgUrl);
+              let imageOutput = document.getElementById("imageOutput");
+              let img = document.createElement("img");
+              img.src = imgUrl;
+              imageOutput.appendChild(img);
+            });
+          }
+        } catch (err) {
+          console.error("Error in Stability call for prompt " + (i+1) + ":", err);
+          document.getElementById("debugOutput").innerText += "Error in Stability call for prompt " + (i+1) + ":\n" + err.toString() + "\n\n";
+        }
       }
-      
-      let response = await fetch(sdEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      let data = await response.json();
-      if (!data.success) {
-        console.error("Stability request failed:", data.error);
-        document.getElementById("debugOutput").innerText += "Stability Error:\n" + data.error + "\n\n";
-        return;
-      }
-      window.generatedImages = data.images; // Store images globally for download.
-      const imageOutput = document.getElementById("imageOutput");
-      imageOutput.innerHTML = "";
-      data.images.forEach((imgUrl) => {
-        const img = document.createElement("img");
-        img.src = imgUrl;
-        imageOutput.appendChild(img);
-      });
     }
     // --- End Send Prompt ---
     
@@ -348,7 +368,6 @@
     
     // --- Download Images Functionality ---
     async function addPngMetadata(base64Image, description) {
-      // Convert base64 image string to Uint8Array
       const base64Data = base64Image.split(',')[1];
       const binaryString = atob(base64Data);
       const len = binaryString.length;
@@ -356,7 +375,6 @@
       for (let i = 0; i < len; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      // Embed the Description metadata into the PNG.
       const newBuffer = pngMetadata.embed(bytes, { Description: description });
       let binary = "";
       newBuffer.forEach(b => binary += String.fromCharCode(b));
@@ -474,6 +492,7 @@
         
         let trimmedReview = reviewResponse.trim();
         let finalOutput = "";
+        // If first six characters are digits, then assume it's a valid prompt.
         if (/^\d{6}/.test(trimmedReview)) {
           finalOutput = trimmedReview;
         } else {
@@ -485,8 +504,10 @@
         finalOutput = applyKeywordSubstitutions(finalOutput);
         document.getElementById("verifiedOutput").innerText = finalOutput;
         
+        // Store final prompts (one per line) for download.
         window.generatedPrompts = finalOutput.split("\n").filter(line => line.trim() !== "");
         
+        // Build negative prompt separately (do not include it in the main prompt)
         const negativePromptString = [].concat(
           config.FORBIDDEN_EVIL_WORDS.map(item => item.keyword),
           config.FORBIDDEN_NEUTRAL_WORDS.map(item => item.keyword),
@@ -501,7 +522,9 @@
         }
         
         const finalNumbered = forcePrefillNaming(finalOutput, surah, verse, batch);
-        await sendToStableDiffusion(finalNumbered, negativePromptString);
+        // Split final numbered prompts into array for individual calls.
+        const promptLines = finalNumbered.split("\n").filter(line => line.trim() !== "");
+        await sendToStableDiffusion(promptLines, negativePromptString);
       } catch (error) {
         console.error("Error:", error);
         if (error.toString().toLowerCase().includes("connection")) {
