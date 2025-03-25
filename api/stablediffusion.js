@@ -1,73 +1,83 @@
-// /api/stablediffusion.js
+async function sendToStableDiffusion(promptsArray, negativePrompt) {
+  for (let i = 0; i < promptsArray.length; i++) {
+    let promptText = promptsArray[i].trim();
+    
+    // Skip if empty after the delimiter
+    let parts = promptText.split(" ||| ");
+    if (parts.length < 2 || parts[1].trim() === "") {
+      document.getElementById("debugOutput").innerText +=
+        "Skipping empty prompt for: " + promptText + "\n\n";
+      continue;
+    }
 
-export default async function handler(req, res) {
-  // Basic CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    // Trim if too long
+    if (promptText.length > 2000) {
+      promptText = promptText.substring(0, 2000);
+    }
 
-  // Handle preflight
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const { prompts, negative_prompt } = req.body;
-  if (!prompts || !Array.isArray(prompts) || prompts.length === 0) {
-    return res.status(400).json({ error: "Invalid prompts" });
-  }
-
-  const apiKey = process.env.STABILITY_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: "Missing STABILITY_API_KEY" });
-  }
-
-  const engineId = "stable-diffusion-xl-1024-v1-0"; // or whichever engine you use
-
-  try {
-    // For each prompt, call the Stability API in parallel
-    const results = await Promise.all(
-      prompts.map(async (promptText) => {
-        const response = await fetch(
-          `https://api.stability.ai/v1/generation/${engineId}/text-to-image`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-              text_prompts: [{ text: promptText }],
-              negative_prompt, // Pass the negative prompt here
-              cfg_scale: 9,
-              clip_guidance_preset: "FAST_BLUE",
-              samples: 1,
-              steps: 30
-            })
+    // Build the JSON payload
+    const payload = {
+      prompts: [promptText],
+      negative_prompt: negativePrompt,
+      cfg_scale: 9,
+      clip_guidance_preset: "FAST_BLUE",
+      samples: 1,
+      steps: 30
+    };
+    
+    document.getElementById("debugOutput").innerText +=
+      "Stability Payload for prompt " + (i+1) + ":\n" + JSON.stringify(payload, null, 2) + "\n\n";
+    
+    try {
+      let response = await fetch("https://visual-quran.vercel.app/api/stablediffusion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      let data = await response.json();
+      
+      // If success = false, log the error
+      if (!data.success) {
+        document.getElementById("debugOutput").innerText +=
+          "Stability Error for prompt " + (i+1) + ":\n" + data.error + "\n\n";
+      }
+      // data.artifacts is an array *of arrays*
+      else if (data.artifacts && Array.isArray(data.artifacts)) {
+        // Flatten the array-of-arrays
+        data.artifacts.forEach((artifactArray, idxA) => {
+          // artifactArray is like [ { base64: "...", seed: 123, ... } ]
+          if (Array.isArray(artifactArray)) {
+            artifactArray.forEach((artifact, idxB) => {
+              // Convert base64 to an image
+              const imgUrl = `data:image/png;base64,${artifact.base64}`;
+              window.generatedImages.push(imgUrl);
+              
+              // Append the image to the gallery
+              const imageOutput = document.getElementById("imageOutput");
+              const img = document.createElement("img");
+              img.src = imgUrl;
+              imageOutput.appendChild(img);
+              
+              // Save metadata in debug
+              document.getElementById("debugOutput").innerText +=
+                `Artifact metadata (prompt ${i+1}, array ${idxA+1}, artifact ${idxB+1}):\n` +
+                JSON.stringify(artifact, null, 2) + "\n\n";
+            });
+          } else {
+            // If by some chance artifactArray is not an array
+            document.getElementById("debugOutput").innerText +=
+              "Unexpected artifact format:\n" + JSON.stringify(artifactArray, null, 2) + "\n\n";
           }
-        );
-
-        if (!response.ok) {
-          const errMsg = await response.text();
-          throw new Error(`Stability API error: ${errMsg}`);
-        }
-
-        const data = await response.json();
-        if (!data.artifacts || !Array.isArray(data.artifacts) || data.artifacts.length === 0) {
-          throw new Error("No images returned from Stability API");
-        }
-
-        // Return the artifacts array for this prompt
-        return data.artifacts;
-      })
-    );
-
-    return res.status(200).json({ success: true, artifacts: results });
-  } catch (err) {
-    console.error("Stability AI error:", err);
-    return res.status(500).json({ error: "Stability AI request failed" });
+        });
+      }
+      else {
+        // Unexpected shape
+        document.getElementById("debugOutput").innerText +=
+          "Unexpected Stability API response: " + JSON.stringify(data) + "\n\n";
+      }
+    } catch (err) {
+      document.getElementById("debugOutput").innerText +=
+        "Error in Stability call for prompt " + (i+1) + ":\n" + err.toString() + "\n\n";
+    }
   }
 }
