@@ -53,13 +53,13 @@
       </div>
     </form>
     
-    <h2>Step 1. Replacing forbidden words</h2>
+    <h2>Step 1. Replacing Forbidden Words</h2>
     <div id="rawOutput" class="output"></div>
     
-    <h2>Step 2. AI Checking if the Text is Halal</h2>
+    <h2>Step 2. AI Halal Verification</h2>
     <div id="reviewedOutput" class="output"></div>
     
-    <h2>Step 3. Final Replacement & Image Generation</h2>
+    <h2>Step 3. Final Output & Image Generation</h2>
     <div id="verifiedOutput" class="output"></div>
     
     <h2>Generated Images (From Stable Diffusion)</h2>
@@ -78,7 +78,7 @@
       return num.toString().padStart(size, '0');
     }
     
-    // Updated function: now uses the actual number of reviewed prompts instead of a fixed batch count.
+    // Uses the actual number of reviewed prompts (paragraphs) to reassign codes.
     function forcePrefillNaming(text, startSurah, startVerse) {
       const delimiter = " ||| ";
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
@@ -123,7 +123,7 @@
       return result;
     }
     
-    // New function to apply keyword substitutions based on the mappings in config
+    // Apply keyword substitutions per configuration.
     function applyKeywordSubstitutions(text) {
       if (config.FORBIDDEN_EVIL_WORDS && Array.isArray(config.FORBIDDEN_EVIL_WORDS)) {
         config.FORBIDDEN_EVIL_WORDS.forEach(item => {
@@ -291,16 +291,17 @@
     }
     // --- End Send Prompt ---
     
-    // --- Verify Prompt with Prefill ---
+    // --- Verify Prompt with Prefill Assistant Message ---
     async function verifyPrompt(rawText) {
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
+      // We now add a prefill assistant message with the fixed text "000000 ||| " at the end of the messages array.
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
         system: config.SYSTEM_ROLE,
-        prefill: config.PREFILL_TEMPLATE,
         messages: [
           { role: "assistant", content: rawText },
+          { role: "assistant", content: "000000 ||| " },
           { role: "user", content: config.REVIEW_INSTRUCTIONS }
         ]
       };
