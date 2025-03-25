@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quranic Verse Stable Diffusion Prompt Generator</title>
+  <title>QV</title>
   <style>
     /* Reset basic elements */
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,20 +22,12 @@
     }
     .output { max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace; }
     .debug { max-height: 300px; }
-    .image-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .image-gallery img { width: 100%; border-radius: 4px; border: 1px solid #ccc; }
-    #downloadButton { display: block; margin: 20px auto; padding: 10px 20px; background: #27ae60; border: none; color: #fff; border-radius: 4px; cursor: pointer; }
-    #downloadButton:hover { background: #1e8449; }
   </style>
-  <!-- External Libraries -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-  <script src="https://unpkg.com/png-metadata@latest/dist/png-metadata.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>Quranic Verse SD Prompt Generator</h1>
-    <p>Enter the verse details below. (Anthropic API key is handled by the Vercel proxy.)</p>
+    <h1>QV</h1>
+    <p>Enter the verse details below. This app will generate textual prompts only.</p>
     
     <form id="promptForm">
       <div id="surahSelectWrapper">
@@ -61,13 +53,8 @@
     <h2>Step 2. AI Halal Verification</h2>
     <div id="reviewedOutput" class="output"></div>
     
-    <h2>Step 3. Final Output & Image Generation</h2>
+    <h2>Step 3. Final Output (Text Prompts)</h2>
     <div id="verifiedOutput" class="output"></div>
-    
-    <h2>Generated Images (From Stable Diffusion)</h2>
-    <div id="imageOutput" class="image-gallery"></div>
-    
-    <button id="downloadButton">Download All Images</button>
     
     <h2>Debug Information</h2>
     <pre id="debugOutput" class="debug"></pre>
@@ -105,7 +92,6 @@
       }
       return corrected.join("\n");
     }
-    
     // --- End Helper Functions ---
     
     // --- Version Info ---
@@ -118,10 +104,6 @@
     
     const debug = true;
     let conversation = [];
-    // Store final prompts for download
-    window.generatedPrompts = [];
-    // Store the final base64 images
-    window.generatedImages = [];
     
     // --- Load Configuration ---
     let config = {};
@@ -186,91 +168,6 @@
     });
     // --- End Update Verse Dropdown ---
     
-    // --- Send Prompt to Stable Diffusion ---
-    async function sendToStableDiffusion(promptsArray, negativePrompt) {
-      for (let i = 0; i < promptsArray.length; i++) {
-        let promptText = promptsArray[i].trim();
-        
-        // Skip if empty after the delimiter
-        let parts = promptText.split(" ||| ");
-        if (parts.length < 2 || parts[1].trim() === "") {
-          document.getElementById("debugOutput").innerText += 
-            "Skipping empty prompt for: " + promptText + "\n\n";
-          continue;
-        }
-        
-        // Trim if too long
-        if (promptText.length > 2000) {
-          promptText = promptText.substring(0, 2000);
-        }
-        
-        // Build the JSON payload
-        const payload = {
-          prompts: [promptText],
-          negative_prompt: negativePrompt,
-          cfg_scale: 9,
-          clip_guidance_preset: "FAST_BLUE",
-          samples: 1,
-          steps: 30
-        };
-        
-        // Log a "hidden" version of the payload
-        document.getElementById("debugOutput").innerText += 
-          "Stability Payload for prompt " + (i+1) + ":\n" +
-          JSON.stringify({ ...payload, prompts: ["[hidden prompt text]"] }, null, 2) +
-          "\n\n";
-        
-        try {
-          let response = await fetch("https://visual-quran.vercel.app/api/stablediffusion", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-          let data = await response.json();
-          
-          // Log a "hidden" version of the response
-          document.getElementById("debugOutput").innerText +=
-            "Stability Response (prompt " + (i+1) + "):\n";
-          
-          if (!data.success) {
-            // If success = false, log the error
-            document.getElementById("debugOutput").innerText +=
-              JSON.stringify(data, null, 2) + "\n\n";
-          } else if (data.artifacts && Array.isArray(data.artifacts)) {
-            // data.artifacts is actually an array-of-arrays if multiple prompts
-            // but here we only passed 1 prompt at a time, so we expect an array of artifacts
-            const debugArtifacts = data.artifacts.map((art) => {
-              return { ...art, base64: "[hidden]" };
-            });
-            document.getElementById("debugOutput").innerText += 
-              JSON.stringify({ success: data.success, artifacts: debugArtifacts }, null, 2) + "\n\n";
-            
-            // Now actually display the images
-            data.artifacts.forEach((artifact, idx) => {
-              // Convert base64 to an image
-              const imgUrl = `data:image/png;base64,${artifact.base64}`;
-              window.generatedImages.push(imgUrl);
-              
-              // Append the image to the gallery
-              const imageOutput = document.getElementById("imageOutput");
-              const img = document.createElement("img");
-              img.src = imgUrl;
-              imageOutput.appendChild(img);
-            });
-            
-          } else {
-            // Unexpected shape
-            document.getElementById("debugOutput").innerText +=
-              "Unexpected Stability API response:\n" + JSON.stringify(data, null, 2) + "\n\n";
-          }
-        } catch (err) {
-          document.getElementById("debugOutput").innerText +=
-            "Error in Stability call for prompt " + (i+1) + ":\n" + err.toString() + "\n\n";
-        }
-      }
-    }
-    // --- End Send Prompt ---
-    
     // --- Verify Prompt ---
     async function verifyPrompt(rawText) {
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
@@ -318,58 +215,7 @@
     }
     // --- End Verify Prompt ---
     
-    // --- Download Images Functionality ---
-    async function addPngMetadata(base64Image, description) {
-      try {
-        const base64Data = base64Image.split(',')[1];
-        const binaryString = atob(base64Data);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const newBuffer = pngMetadata.embed(bytes, { Description: description });
-        let binary = "";
-        newBuffer.forEach(b => binary += String.fromCharCode(b));
-        return "data:image/png;base64," + btoa(binary);
-      } catch (err) {
-        console.error("Error embedding metadata: ", err);
-        // If embedding fails, return the original image
-        return base64Image;
-      }
-    }
-    
-    async function downloadImages() {
-      if (!window.generatedImages || window.generatedImages.length === 0) {
-        alert("No images available for download.");
-        return;
-      }
-      const zip = new JSZip();
-      const folder = zip.folder("Images");
-      
-      for (let i = 0; i < window.generatedImages.length; i++) {
-        const imgBase64 = window.generatedImages[i];
-        // Use the prompt line if available, otherwise fallback
-        const promptLine = window.generatedPrompts[i] || ("image" + (i+1));
-        let filename = promptLine.replace(/[^a-z0-9]/gi, '_').substring(0, 50) || "image";
-        filename += ".png";
-        try {
-          const newImgBase64 = await addPngMetadata(imgBase64, promptLine);
-          const base64Data = newImgBase64.split(',')[1];
-          folder.file(filename, base64Data, { base64: true });
-        } catch (err) {
-          console.error("Error embedding metadata for image " + i, err);
-        }
-      }
-      
-      zip.generateAsync({ type: "blob" }).then(function(content) {
-        saveAs(content, "images.zip");
-      });
-    }
-    
-    document.getElementById("downloadButton").addEventListener("click", downloadImages);
-    // --- End Download Images ---
-    
+    // --- Form Submission (Generate Prompts) ---
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       
@@ -392,10 +238,6 @@
         alert("Configuration not loaded. Please try again later.");
         return;
       }
-      
-      // Clear out old results
-      window.generatedImages = [];
-      document.getElementById("imageOutput").innerHTML = "";
       
       document.getElementById("rawOutput").innerText = "Generating prompts...";
       document.getElementById("reviewedOutput").innerText = "";
@@ -480,23 +322,9 @@
           return;
         }
         
-        document.getElementById("verifiedOutput").innerText = finalOutput;
-        
         // 3) Force the correct numbering
         const finalNumbered = forcePrefillNaming(finalOutput, surah, verse, batch);
-        // Store each line in generatedPrompts so we can embed them in the PNG metadata
-        window.generatedPrompts = finalNumbered.split("\n").filter(line => line.trim() !== "");
-        
-        // 4) Build negative prompt
-        const negativePromptString = [].concat(
-          config.FORBIDDEN_EVIL_WORDS.map(item => item.keyword),
-          config.FORBIDDEN_NEUTRAL_WORDS.map(item => item.keyword),
-          config.FORBIDDEN_SPIRITUAL_WORDS.map(item => item.keyword)
-        ).join(", ");
-        
-        // 5) Send each prompt to Stability
-        const promptLines = finalNumbered.split("\n").filter(line => line.trim() !== "");
-        await sendToStableDiffusion(promptLines, negativePromptString);
+        document.getElementById("verifiedOutput").innerText = finalNumbered;
         
       } catch (error) {
         console.error("Error:", error);
@@ -505,6 +333,7 @@
           "Error Details:\n" + error.toString() + "\n";
       }
     });
+    // --- End Form Submission ---
   </script>
 </body>
 </html>
