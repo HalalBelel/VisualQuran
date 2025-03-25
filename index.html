@@ -122,8 +122,6 @@
     window.generatedPrompts = [];
     // Store the final base64 images
     window.generatedImages = [];
-    // Store the entire artifact metadata
-    window.generatedArtifacts = [];
     
     // --- Load Configuration ---
     let config = {};
@@ -132,7 +130,8 @@
       .then(data => {
         config = data;
         if (debug) {
-          document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(data, null, 2) + "\n\n";
+          document.getElementById("debugOutput").innerText += 
+            "Configuration Loaded:\n" + JSON.stringify(data, null, 2) + "\n\n";
         }
       })
       .catch(err => {
@@ -159,7 +158,8 @@
       })
       .catch(err => {
         console.error("Error loading surah names:", err);
-        document.getElementById("debugOutput").innerText += "Error loading surahnames.json:\n" + err.toString() + "\n";
+        document.getElementById("debugOutput").innerText += 
+          "Error loading surahnames.json:\n" + err.toString() + "\n";
       });
     // --- End Load Surah Data ---
     
@@ -176,7 +176,8 @@
           verseSelect.appendChild(option);
         }
         verseSelect.value = "1";
-        document.getElementById("debugOutput").innerText += "Updated verse dropdown to 1-" + maxVerse + " for surah " + surahNumber + "\n";
+        document.getElementById("debugOutput").innerText += 
+          "Updated verse dropdown to 1-" + maxVerse + " for surah " + surahNumber + "\n";
       }
     }
     
@@ -193,7 +194,8 @@
         // Skip if empty after the delimiter
         let parts = promptText.split(" ||| ");
         if (parts.length < 2 || parts[1].trim() === "") {
-          document.getElementById("debugOutput").innerText += "Skipping empty prompt for: " + promptText + "\n\n";
+          document.getElementById("debugOutput").innerText += 
+            "Skipping empty prompt for: " + promptText + "\n\n";
           continue;
         }
         
@@ -212,8 +214,11 @@
           steps: 30
         };
         
-        document.getElementById("debugOutput").innerText +=
-          "Stability Payload for prompt " + (i+1) + ":\n" + JSON.stringify(payload, null, 2) + "\n\n";
+        // Log a "hidden" version of the payload
+        document.getElementById("debugOutput").innerText += 
+          "Stability Payload for prompt " + (i+1) + ":\n" +
+          JSON.stringify({ ...payload, prompts: ["[hidden prompt text]"] }, null, 2) +
+          "\n\n";
         
         try {
           let response = await fetch("https://visual-quran.vercel.app/api/stablediffusion", {
@@ -223,16 +228,24 @@
           });
           let data = await response.json();
           
-          // If success = false, log the error
+          // Log a "hidden" version of the response
+          document.getElementById("debugOutput").innerText +=
+            "Stability Response (prompt " + (i+1) + "):\n";
+          
           if (!data.success) {
+            // If success = false, log the error
             document.getElementById("debugOutput").innerText +=
-              "Stability Error for prompt " + (i+1) + ":\n" + data.error + "\n\n";
-          }
-          // If artifacts array returned, display images + metadata
-          else if (data.artifacts && Array.isArray(data.artifacts)) {
-            // Save the entire artifacts array for debugging/inspection
-            window.generatedArtifacts.push(...data.artifacts);
+              JSON.stringify(data, null, 2) + "\n\n";
+          } else if (data.artifacts && Array.isArray(data.artifacts)) {
+            // data.artifacts is actually an array-of-arrays if multiple prompts
+            // but here we only passed 1 prompt at a time, so we expect an array of artifacts
+            const debugArtifacts = data.artifacts.map((art) => {
+              return { ...art, base64: "[hidden]" };
+            });
+            document.getElementById("debugOutput").innerText += 
+              JSON.stringify({ success: data.success, artifacts: debugArtifacts }, null, 2) + "\n\n";
             
+            // Now actually display the images
             data.artifacts.forEach((artifact, idx) => {
               // Convert base64 to an image
               const imgUrl = `data:image/png;base64,${artifact.base64}`;
@@ -243,22 +256,12 @@
               const img = document.createElement("img");
               img.src = imgUrl;
               imageOutput.appendChild(img);
-              
-              // Create a copy for debug that hides the full base64 data
-              const artifactDebug = Object.assign({}, artifact);
-              if (artifactDebug.base64) {
-                artifactDebug.base64 = "[hidden base64 data]";
-              }
-              
-              document.getElementById("debugOutput").innerText +=
-                "Artifact metadata (prompt " + (i+1) + ", artifact " + (idx+1) + "):\n" +
-                JSON.stringify(artifactDebug, null, 2) + "\n\n";
             });
-          }
-          else {
+            
+          } else {
             // Unexpected shape
             document.getElementById("debugOutput").innerText +=
-              "Unexpected Stability API response: " + JSON.stringify(data) + "\n\n";
+              "Unexpected Stability API response:\n" + JSON.stringify(data, null, 2) + "\n\n";
           }
         } catch (err) {
           document.getElementById("debugOutput").innerText +=
@@ -281,7 +284,16 @@
         ]
       };
       document.getElementById("debugOutput").innerText +=
-        "Verification Payload Sent:\n" + JSON.stringify(payload, null, 2) + "\n\n";
+        "Verification Payload Sent:\n" +
+        JSON.stringify(
+          {
+            ...payload,
+            messages: "[omitted for brevity]"
+          },
+          null,
+          2
+        ) +
+        "\n\n";
       
       const response = await fetch(config.VERCEL_PROXY_URL, {
         method: "POST",
@@ -328,7 +340,7 @@
     }
     
     async function downloadImages() {
-      if (!window.generatedImages || !window.generatedPrompts) {
+      if (!window.generatedImages || window.generatedImages.length === 0) {
         alert("No images available for download.");
         return;
       }
@@ -337,6 +349,7 @@
       
       for (let i = 0; i < window.generatedImages.length; i++) {
         const imgBase64 = window.generatedImages[i];
+        // Use the prompt line if available, otherwise fallback
         const promptLine = window.generatedPrompts[i] || ("image" + (i+1));
         let filename = promptLine.replace(/[^a-z0-9]/gi, '_').substring(0, 50) || "image";
         filename += ".png";
@@ -365,8 +378,13 @@
       const batch = parseInt(document.getElementById("batchSelect").value);
       const surahItem = surahData.find(item => item["Surah Number"] === surah);
       const verseMax = surahItem ? surahItem["Surah Verses"] : Infinity;
-      if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
-          surah < 1 || surah > 114 || verse < 1 || verse > verseMax || batch < 1 || batch > 111) {
+      
+      if (
+        isNaN(surah) || isNaN(verse) || isNaN(batch) ||
+        surah < 1 || surah > 114 ||
+        verse < 1 || verse > verseMax ||
+        batch < 1 || batch > 111
+      ) {
         alert("Please enter valid inputs.");
         return;
       }
@@ -377,8 +395,11 @@
       
       // Clear out old results
       window.generatedImages = [];
-      window.generatedArtifacts = [];
       document.getElementById("imageOutput").innerHTML = "";
+      
+      document.getElementById("rawOutput").innerText = "Generating prompts...";
+      document.getElementById("reviewedOutput").innerText = "";
+      document.getElementById("verifiedOutput").innerText = "";
       
       const expectedPrefill = config.PREFILL_TEMPLATE
         .replace("{SURAH_PADDED}", pad(surah, 3))
@@ -411,11 +432,16 @@
       ];
       
       document.getElementById("debugOutput").innerText +=
-        "Prompt Generation Payload Sent:\n" + JSON.stringify(generationPayload, null, 2) + "\n\n";
-      
-      document.getElementById("rawOutput").innerText = "Generating prompts...";
-      document.getElementById("reviewedOutput").innerText = "";
-      document.getElementById("verifiedOutput").innerText = "";
+        "Prompt Generation Payload Sent:\n" +
+        JSON.stringify(
+          {
+            ...generationPayload,
+            messages: "[omitted for brevity]"
+          },
+          null,
+          2
+        ) +
+        "\n\n";
       
       try {
         // 1) Generate raw prompts
@@ -438,7 +464,6 @@
           : genData.content;
         
         document.getElementById("rawOutput").innerText = rawText;
-        
         conversation.push({ role: "assistant", content: rawText });
         
         // 2) Verify the raw prompts
@@ -459,6 +484,7 @@
         
         // 3) Force the correct numbering
         const finalNumbered = forcePrefillNaming(finalOutput, surah, verse, batch);
+        // Store each line in generatedPrompts so we can embed them in the PNG metadata
         window.generatedPrompts = finalNumbered.split("\n").filter(line => line.trim() !== "");
         
         // 4) Build negative prompt
@@ -475,7 +501,8 @@
       } catch (error) {
         console.error("Error:", error);
         document.getElementById("rawOutput").innerText = "Error generating prompts.";
-        document.getElementById("debugOutput").innerText += "Error Details:\n" + error.toString() + "\n";
+        document.getElementById("debugOutput").innerText += 
+          "Error Details:\n" + error.toString() + "\n";
       }
     });
   </script>
