@@ -14,7 +14,7 @@
     form { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-around; margin-bottom: 20px; }
     form > div { flex: 1 1 200px; min-width: 200px; }
     label { display: block; margin-bottom: 5px; font-weight: bold; }
-    select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    select, input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
     button { padding: 10px 20px; border: none; background: #3498db; color: #fff; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s; margin: auto; }
     button:hover { background: #2980b9; }
     .output, .debug, .version {
@@ -41,22 +41,18 @@
         <select id="verseSelect"></select>
       </div>
       <div id="batchSelectWrapper">
-        <label for="batchSelect">Select Consecutive Verses:</label>
-        <select id="batchSelect">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-        </select>
+        <label for="batchSelect">Select Consecutive Verses (max 111):</label>
+        <input id="batchSelect" type="number" min="1" max="111" value="1" />
       </div>
       <div style="flex-basis: 100%; text-align: center;">
         <button type="submit">Generate Prompts</button>
       </div>
     </form>
     
-    <h2>Step 1. Replacing Forbidden Words</h2>
+    <h2>Step 1. Replacing forbidden words</h2>
     <div id="rawOutput" class="output"></div>
     
-    <h2>Step 2. AI Halal Verification</h2>
+    <h2>Step 2. AI Checking if the Text is Halal</h2>
     <div id="reviewedOutput" class="output"></div>
     
     <h2>Step 3. Final Output & Image Generation</h2>
@@ -78,20 +74,21 @@
       return num.toString().padStart(size, '0');
     }
     
-    // Uses the actual number of reviewed prompts (paragraphs) to reassign codes.
-    function forcePrefillNaming(text, startSurah, startVerse) {
+    function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const delimiter = " ||| ";
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
       let corrected = [];
-      for (let i = 0; i < paragraphs.length; i++) {
+      for (let i = 0; i < batch; i++) {
         const code = `${pad(startSurah, 3)}${pad(startVerse + i, 3)}${delimiter}`;
-        let p = paragraphs[i].trim();
-        const index = p.indexOf(delimiter);
         let content = "";
-        if (index !== -1) {
-          content = p.substring(index + delimiter.length).trim();
-        } else {
-          content = p;
+        if (i < paragraphs.length) {
+          let p = paragraphs[i].trim();
+          const index = p.indexOf(delimiter);
+          if (index !== -1) {
+            content = p.substring(index + delimiter.length).trim();
+          } else {
+            content = p;
+          }
         }
         corrected.push(code + content);
       }
@@ -123,7 +120,7 @@
       return result;
     }
     
-    // Apply keyword substitutions per configuration.
+    // Apply keyword substitutions based on the config.
     function applyKeywordSubstitutions(text) {
       if (config.FORBIDDEN_EVIL_WORDS && Array.isArray(config.FORBIDDEN_EVIL_WORDS)) {
         config.FORBIDDEN_EVIL_WORDS.forEach(item => {
@@ -267,9 +264,18 @@
     
     // --- Send Prompt to Stable Diffusion ---
     async function sendToStableDiffusion(promptText, negativePrompt) {
-      const prompts = promptText.split("\n").filter(line => line.trim() !== "");
+      // Append the APPEND_PARAMS to each prompt line.
+      let finalText = appendParameters(promptText, config.APPEND_PARAMS);
+      // Prepare payload with the final text split into lines.
+      const prompts = finalText.split("\n").filter(line => line.trim() !== "");
       const sdEndpoint = "https://visual-quran.vercel.app/api/stablediffusion";
       const payload = { prompts, negative_prompt: negativePrompt };
+      
+      // Debug: output the Stability payload.
+      if (debug) {
+        document.getElementById("debugOutput").innerText += "Stability Payload:\n" + JSON.stringify(payload, null, 2) + "\n\n";
+      }
+      
       let response = await fetch(sdEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -291,17 +297,15 @@
     }
     // --- End Send Prompt ---
     
-    // --- Verify Prompt with Prefill Assistant Message ---
+    // --- Verify Prompt ---
     async function verifyPrompt(rawText) {
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
-      // We now add a prefill assistant message with the fixed text "000000 ||| " at the end of the messages array.
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
         system: config.SYSTEM_ROLE,
         messages: [
           { role: "assistant", content: rawText },
-          { role: "assistant", content: "000000 ||| " },
           { role: "user", content: config.REVIEW_INSTRUCTIONS }
         ]
       };
@@ -339,7 +343,7 @@
       const surahItem = surahData.find(item => item["Surah Number"] === surah);
       const verseMax = surahItem ? surahItem["Surah Verses"] : Infinity;
       if (isNaN(surah) || isNaN(verse) || isNaN(batch) ||
-          surah < 1 || surah > 114 || verse < 1 || verse > verseMax || batch < 1 || batch > 3) {
+          surah < 1 || surah > 114 || verse < 1 || verse > verseMax || batch < 1 || batch > 111) {
         alert("Please enter valid inputs.");
         return;
       }
@@ -409,7 +413,18 @@
         const reviewResponse = await verifyPrompt(substitutedRaw);
         document.getElementById("reviewedOutput").innerText = reviewResponse;
         
-        let finalOutput = reviewResponse.trim();
+        let finalOutput = "";
+        let trimmedReview = reviewResponse.trim();
+        if (trimmedReview === "Review Passed") {
+          finalOutput = substitutedRaw;
+        } else if (trimmedReview.indexOf("The updated prompt is as follows:") === 0) {
+          finalOutput = trimmedReview.substring("The updated prompt is as follows:".length).trim();
+        } else {
+          finalOutput = "Connection error: Please regenerate prompt";
+          document.getElementById("verifiedOutput").innerText = finalOutput;
+          return;
+        }
+        
         finalOutput = applyKeywordSubstitutions(finalOutput);
         document.getElementById("verifiedOutput").innerText = finalOutput;
         
@@ -426,8 +441,7 @@
           return;
         }
         
-        // Use the number of reviewed prompts (paragraph count) rather than the fixed batch count.
-        const finalNumbered = forcePrefillNaming(finalOutput, surah, verse);
+        const finalNumbered = forcePrefillNaming(finalOutput, surah, verse, batch);
         await sendToStableDiffusion(finalNumbered, negativePromptString);
       } catch (error) {
         console.error("Error:", error);
