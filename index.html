@@ -132,7 +132,7 @@
       .then(data => {
         config = data;
         if (debug) {
-          document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(config, null, 2) + "\n\n";
+          document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(data, null, 2) + "\n\n";
         }
       })
       .catch(err => {
@@ -185,7 +185,7 @@
     });
     // --- End Update Verse Dropdown ---
     
-    // --- Send Prompt to Stability Diffusion ---
+    // --- Send Prompt to Stable Diffusion ---
     async function sendToStableDiffusion(promptsArray, negativePrompt) {
       for (let i = 0; i < promptsArray.length; i++) {
         let promptText = promptsArray[i].trim();
@@ -244,10 +244,15 @@
               img.src = imgUrl;
               imageOutput.appendChild(img);
               
-              // Print artifact metadata in debug
+              // Create a copy for debug that hides the full base64 data
+              const artifactDebug = Object.assign({}, artifact);
+              if (artifactDebug.base64) {
+                artifactDebug.base64 = "[hidden base64 data]";
+              }
+              
               document.getElementById("debugOutput").innerText +=
                 "Artifact metadata (prompt " + (i+1) + ", artifact " + (idx+1) + "):\n" +
-                JSON.stringify(artifact, null, 2) + "\n\n";
+                JSON.stringify(artifactDebug, null, 2) + "\n\n";
             });
           }
           else {
@@ -303,17 +308,23 @@
     
     // --- Download Images Functionality ---
     async function addPngMetadata(base64Image, description) {
-      const base64Data = base64Image.split(',')[1];
-      const binaryString = atob(base64Data);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      try {
+        const base64Data = base64Image.split(',')[1];
+        const binaryString = atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const newBuffer = pngMetadata.embed(bytes, { Description: description });
+        let binary = "";
+        newBuffer.forEach(b => binary += String.fromCharCode(b));
+        return "data:image/png;base64," + btoa(binary);
+      } catch (err) {
+        console.error("Error embedding metadata: ", err);
+        // If embedding fails, return the original image
+        return base64Image;
       }
-      const newBuffer = pngMetadata.embed(bytes, { Description: description });
-      let binary = "";
-      newBuffer.forEach(b => binary += String.fromCharCode(b));
-      return "data:image/png;base64," + btoa(binary);
     }
     
     async function downloadImages() {
