@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Missing STABILITY_API_KEY" });
   }
 
-  const engineId = "stable-diffusion-xl-1024-v1-0"; // or whichever you use
+  const engineId = "stable-diffusion-xl-1024-v1-0"; // or whichever engine you use
 
   try {
     // For each prompt, call the Stability API in parallel
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
               text_prompts: [{ text: promptText }],
-              negative_prompt, // <--- pass the negative prompt here
+              negative_prompt, // Pass the negative prompt here
               cfg_scale: 9,
               clip_guidance_preset: "FAST_BLUE",
               samples: 1,
@@ -60,12 +60,12 @@ export default async function handler(req, res) {
           throw new Error("No images returned from Stability API");
         }
 
-        // Return the first image as base64
-        return `data:image/png;base64,${data.artifacts[0].base64}`;
+        // Return the artifacts array for this prompt
+        return data.artifacts;
       })
     );
 
-    return res.status(200).json({ success: true, images: results });
+    return res.status(200).json({ success: true, artifacts: results });
   } catch (err) {
     console.error("Stability AI error:", err);
     return res.status(500).json({ error: "Stability AI request failed" });
