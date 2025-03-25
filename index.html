@@ -103,15 +103,8 @@
       return corrected.join("\n");
     }
     
-    // Remove "Negative prompt:" part from the append parameters.
-    function cleanAppendParams(params) {
-      return params.replace(/^Negative prompt:.*?\. /i, "");
-    }
-    
-    function appendParameters(text, params) {
-      const lines = text.split("\n").filter(line => line.trim() !== "");
-      return lines.map(line => line.trim() + " " + params).join("\n");
-    }
+    // For this update, we do NOT append APPEND_PARAMS to the prompt text.
+    // Instead, we use the negative_prompt field separately.
     
     function expandPlaceholders(text, config) {
       let result = text;
@@ -216,6 +209,7 @@
         config = data;
         config.COMMON_SYSTEM_ROLE = expandPlaceholders(config.COMMON_SYSTEM_ROLE, config);
         config.USER_INSTRUCTION_TEMPLATE = expandPlaceholders(config.USER_INSTRUCTION_TEMPLATE, config);
+        // Do not include APPEND_PARAMS in the prompt text (it will be sent separately)
         config.APPEND_PARAMS = expandPlaceholders(config.APPEND_PARAMS, config);
         config.REVIEW_INSTRUCTIONS = expandPlaceholders(config.REVIEW_INSTRUCTIONS, config);
         if (debug) {
@@ -278,16 +272,13 @@
     
     // --- Send Prompt to Stability Diffusion ---
     async function sendToStableDiffusion(promptsArray, negativePrompt) {
-      // Clean APPEND_PARAMS (remove negative prompt text)
-      let cleanedParams = cleanAppendParams(config.APPEND_PARAMS);
-      
-      // Loop over each prompt and send separately
+      // For each prompt, send an individual payload.
       for (let i = 0; i < promptsArray.length; i++) {
         let promptText = promptsArray[i].trim();
-        // Append cleaned parameters to the prompt text
-        promptText = promptText + " " + cleanedParams;
-        
-        // Prepare payload with a single prompt
+        // If the prompt text exceeds 2000 characters, trim it.
+        if (promptText.length > 2000) {
+          promptText = promptText.substring(0, 2000);
+        }
         const payload = {
           text_prompts: [{ text: promptText }],
           negative_prompt: negativePrompt,
@@ -492,7 +483,7 @@
         
         let trimmedReview = reviewResponse.trim();
         let finalOutput = "";
-        // If first six characters are digits, then assume it's a valid prompt.
+        // Check if the first six characters are digits (i.e. valid prompt code)
         if (/^\d{6}/.test(trimmedReview)) {
           finalOutput = trimmedReview;
         } else {
