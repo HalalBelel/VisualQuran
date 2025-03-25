@@ -298,7 +298,7 @@
         document.getElementById("debugOutput").innerText += "Stability Error:\n" + data.error + "\n\n";
         return;
       }
-      window.generatedImages = data.images; // store generated images globally
+      window.generatedImages = data.images; // Store images globally for download.
       const imageOutput = document.getElementById("imageOutput");
       imageOutput.innerHTML = "";
       data.images.forEach((imgUrl) => {
@@ -356,9 +356,8 @@
       for (let i = 0; i < len; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      // Use pngMetadata.embed to embed the Description text
+      // Embed the Description metadata into the PNG.
       const newBuffer = pngMetadata.embed(bytes, { Description: description });
-      // Convert the modified buffer back to a base64 string
       let binary = "";
       newBuffer.forEach(b => binary += String.fromCharCode(b));
       return "data:image/png;base64," + btoa(binary);
@@ -372,24 +371,21 @@
       const zip = new JSZip();
       const folder = zip.folder("Images");
       
-      // Process each image along with its corresponding prompt.
       for (let i = 0; i < window.generatedImages.length; i++) {
         const imgBase64 = window.generatedImages[i];
         const promptLine = window.generatedPrompts[i] || ("image" + (i+1));
-        // For filename, remove non-alphanumeric characters and trim to 50 characters.
         let filename = promptLine.replace(/[^a-z0-9]/gi, '_').substring(0, 50) || "image";
         filename += ".png";
         try {
           const newImgBase64 = await addPngMetadata(imgBase64, promptLine);
-          // Remove the data URI prefix for the zip file.
           const base64Data = newImgBase64.split(',')[1];
-          folder.file(filename, base64Data, {base64: true});
+          folder.file(filename, base64Data, { base64: true });
         } catch (err) {
           console.error("Error embedding metadata for image " + i, err);
         }
       }
       
-      zip.generateAsync({type:"blob"}).then(function(content) {
+      zip.generateAsync({ type: "blob" }).then(function(content) {
         saveAs(content, "images.zip");
       });
     }
@@ -477,7 +473,6 @@
         document.getElementById("reviewedOutput").innerText = reviewResponse;
         
         let trimmedReview = reviewResponse.trim();
-        // Check if the first six characters are digits; if not, treat as connection error.
         let finalOutput = "";
         if (/^\d{6}/.test(trimmedReview)) {
           finalOutput = trimmedReview;
@@ -490,7 +485,6 @@
         finalOutput = applyKeywordSubstitutions(finalOutput);
         document.getElementById("verifiedOutput").innerText = finalOutput;
         
-        // Store the final numbered prompts for download.
         window.generatedPrompts = finalOutput.split("\n").filter(line => line.trim() !== "");
         
         const negativePromptString = [].concat(
