@@ -280,7 +280,7 @@
           promptText = promptText.substring(0, 2000);
         }
         const payload = {
-          text_prompts: [{ text: promptText }],
+          prompts: [promptText],
           negative_prompt: negativePrompt,
           cfg_scale: 9,
           clip_guidance_preset: "FAST_BLUE",
