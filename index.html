@@ -298,13 +298,15 @@
           
           // --- Step 1: First round of substitution on raw text ---
           let rawTextSub1 = replaceForbiddenWords(rawText, config);
-          document.getElementById("rawOutput").innerText += "Verse " + currentVerse + ":\n" + rawTextSub1 + "\n\n";
+          // Append without adding a "Verse X:" label
+          document.getElementById("rawOutput").innerText += rawTextSub1 + "\n\n";
           
           // --- Step 2: Verify prompt using the substituted raw text ---
           let reviewResponse = await verifyPrompt(rawTextSub1);
           // Apply a second substitution on the review response.
           let reviewResponseSub2 = replaceForbiddenWords(reviewResponse, config);
-          document.getElementById("reviewedOutput").innerText += "Verse " + currentVerse + ":\n" + reviewResponseSub2 + "\n\n";
+          // Append without "Verse X:" label
+          document.getElementById("reviewedOutput").innerText += reviewResponseSub2 + "\n\n";
           
           // Store this verse's final prompt (using the review response)
           combinedPrompts.push(reviewResponseSub2);
