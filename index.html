@@ -69,7 +69,12 @@
       return num.toString().padStart(size, '0');
     }
     
-    // Replace forbidden keywords using the lists from config.
+    // Escape special characters for regex.
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+    
+    // Replace forbidden keywords only on full words using word boundaries.
     function replaceForbiddenWords(text, config) {
       let forbidden = [].concat(
         config.FORBIDDEN_EVIL_WORDS || [],
@@ -78,7 +83,8 @@
       );
       let replacedText = text;
       forbidden.forEach(entry => {
-        let regex = new RegExp(entry.keyword, "gi");
+        // Use word boundaries to match full words.
+        let regex = new RegExp("\\b" + escapeRegExp(entry.keyword) + "\\b", "gi");
         replacedText = replacedText.replace(regex, entry.halal_substitute);
       });
       return replacedText;
@@ -255,7 +261,7 @@
           .replace("{VERSE_PADDED}", pad(currentVerse, 3))
           .trim();
         
-        // For individual calls, we set BATCH = 1
+        // For individual calls, set BATCH = 1
         let userInstructionForVerse = config.USER_INSTRUCTION_TEMPLATE
           .replace("{BATCH}", 1)
           .replace("{SURAH}", surah)
@@ -298,14 +304,13 @@
           
           // --- Step 1: First round of substitution on raw text ---
           let rawTextSub1 = replaceForbiddenWords(rawText, config);
-          // Append without adding a "Verse X:" label
+          // Append without extra verse labels
           document.getElementById("rawOutput").innerText += rawTextSub1 + "\n\n";
           
           // --- Step 2: Verify prompt using the substituted raw text ---
           let reviewResponse = await verifyPrompt(rawTextSub1);
           // Apply a second substitution on the review response.
           let reviewResponseSub2 = replaceForbiddenWords(reviewResponse, config);
-          // Append without "Verse X:" label
           document.getElementById("reviewedOutput").innerText += reviewResponseSub2 + "\n\n";
           
           // Store this verse's final prompt (using the review response)
