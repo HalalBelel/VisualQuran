@@ -69,7 +69,7 @@
       return num.toString().padStart(size, '0');
     }
     
-    // Replace forbidden keywords using config arrays.
+    // Replace forbidden keywords using the lists from config.
     function replaceForbiddenWords(text, config) {
       let forbidden = [].concat(
         config.FORBIDDEN_EVIL_WORDS || [],
@@ -84,7 +84,7 @@
       return replacedText;
     }
     
-    // If not enough prompts are returned, fill in missing lines with a default message.
+    // Force correct numbering if needed.
     function forcePrefillNaming(text, startSurah, startVerse, batch) {
       const delimiter = " ||| ";
       const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
@@ -127,8 +127,7 @@
       .then(data => {
         config = data;
         if (debug) {
-          document.getElementById("debugOutput").innerText += 
-            "Configuration Loaded:\n" + JSON.stringify(data, null, 2) + "\n\n";
+          document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(data, null, 2) + "\n\n";
         }
       })
       .catch(err => {
@@ -155,8 +154,7 @@
       })
       .catch(err => {
         console.error("Error loading surah names:", err);
-        document.getElementById("debugOutput").innerText += 
-          "Error loading surahnames.json:\n" + err.toString() + "\n";
+        document.getElementById("debugOutput").innerText += "Error loading surahnames.json:\n" + err.toString() + "\n";
       });
     // --- End Load Surah Data ---
     
@@ -173,8 +171,7 @@
           verseSelect.appendChild(option);
         }
         verseSelect.value = "1";
-        document.getElementById("debugOutput").innerText += 
-          "Updated verse dropdown to 1-" + maxVerse + " for surah " + surahNumber + "\n";
+        document.getElementById("debugOutput").innerText += "Updated verse dropdown to 1-" + maxVerse + " for surah " + surahNumber + "\n";
       }
     }
     
@@ -195,10 +192,8 @@
           { role: "user", content: config.REVIEW_INSTRUCTIONS }
         ]
       };
-      document.getElementById("debugOutput").innerText +=
-        "Verification Payload Sent:\n" +
-        JSON.stringify({ ...payload, messages: "[omitted for brevity]" }, null, 2) +
-        "\n\n";
+      document.getElementById("debugOutput").innerText += "Verification Payload Sent:\n" +
+        JSON.stringify({ ...payload, messages: "[omitted for brevity]" }, null, 2) + "\n\n";
       
       const response = await fetch(config.VERCEL_PROXY_URL, {
         method: "POST",
@@ -206,9 +201,7 @@
         body: JSON.stringify(payload)
       });
       const data = await response.json();
-      
-      document.getElementById("debugOutput").innerText +=
-        "Verification API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
+      document.getElementById("debugOutput").innerText += "Verification API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
       
       if (!data.content) {
         throw new Error("No content in verification response");
@@ -217,12 +210,11 @@
       let reviewResponse = Array.isArray(data.content)
         ? data.content.map(item => item.text).join("\n\n")
         : data.content;
-      
       return reviewResponse;
     }
     // --- End Verify Prompt ---
     
-    // --- Form Submission (Generate Prompts) ---
+    // --- Form Submission: Split Batch into Individual Calls ---
     document.getElementById("promptForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       
@@ -246,96 +238,88 @@
         return;
       }
       
-      document.getElementById("rawOutput").innerText = "Generating prompts...";
+      // Clear outputs
+      document.getElementById("rawOutput").innerText = "";
       document.getElementById("reviewedOutput").innerText = "";
       document.getElementById("verifiedOutput").innerText = "";
       
-      const expectedPrefill = config.PREFILL_TEMPLATE
-        .replace("{SURAH_PADDED}", pad(surah, 3))
-        .replace("{VERSE_PADDED}", pad(verse, 3))
-        .trim();
+      let combinedPrompts = [];
       
-      let userInstruction = config.USER_INSTRUCTION_TEMPLATE
-        .replace("{BATCH}", batch)
-        .replace("{SURAH}", surah)
-        .replace("{VERSE}", verse)
-        .replace("{SURAH_PADDED}", pad(surah, 3))
-        .replace("{VERSE_PADDED}", pad(verse, 3))
-        .replace("{PREFILL}", expectedPrefill);
-      
-      let newUserInstruction = config.COMMON_SYSTEM_ROLE + "\n" + userInstruction;
-      
-      const maxTokens = batch * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
-      const generationPayload = {
-        model: config.MODEL_NAME,
-        max_tokens: maxTokens,
-        system: config.SYSTEM_ROLE,
-        messages: [
-          { role: "user", content: newUserInstruction }
-        ]
-      };
-      
-      conversation = [
-        { role: "system", content: config.SYSTEM_ROLE },
-        { role: "user", content: newUserInstruction }
-      ];
-      
-      document.getElementById("debugOutput").innerText +=
-        "Prompt Generation Payload Sent:\n" +
-        JSON.stringify({ ...generationPayload, messages: "[omitted for brevity]" }, null, 2) +
-        "\n\n";
-      
-      try {
-        // 1) Generate raw prompts
-        const genRes = await fetch(config.VERCEL_PROXY_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(generationPayload)
-        });
-        const genData = await genRes.json();
+      // Process each verse individually
+      for (let i = 0; i < batch; i++) {
+        let currentVerse = verse + i;
         
-        document.getElementById("debugOutput").innerText +=
-          "Generation API Response:\n" + JSON.stringify(genData, null, 2) + "\n\n";
+        // Prepare expected prefill for this verse
+        let expectedPrefillForVerse = config.PREFILL_TEMPLATE
+          .replace("{SURAH_PADDED}", pad(surah, 3))
+          .replace("{VERSE_PADDED}", pad(currentVerse, 3))
+          .trim();
         
-        if (!genData.content) {
-          throw new Error("No content in generation response");
+        // For individual calls, we set BATCH = 1
+        let userInstructionForVerse = config.USER_INSTRUCTION_TEMPLATE
+          .replace("{BATCH}", 1)
+          .replace("{SURAH}", surah)
+          .replace("{VERSE}", currentVerse)
+          .replace("{SURAH_PADDED}", pad(surah, 3))
+          .replace("{VERSE_PADDED}", pad(currentVerse, 3))
+          .replace("{PREFILL}", expectedPrefillForVerse);
+        
+        let newUserInstructionForVerse = config.COMMON_SYSTEM_ROLE + "\n" + userInstructionForVerse;
+        let maxTokens = 1 * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
+        let generationPayload = {
+          model: config.MODEL_NAME,
+          max_tokens: maxTokens,
+          system: config.SYSTEM_ROLE,
+          messages: [
+            { role: "user", content: newUserInstructionForVerse }
+          ]
+        };
+        
+        document.getElementById("debugOutput").innerText += "Prompt Generation Payload for verse " + currentVerse + ":\n" +
+          JSON.stringify({ ...generationPayload, messages: "[omitted for brevity]" }, null, 2) + "\n\n";
+        
+        try {
+          let genRes = await fetch(config.VERCEL_PROXY_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(generationPayload)
+          });
+          let genData = await genRes.json();
+          document.getElementById("debugOutput").innerText += "Generation API Response for verse " + currentVerse + ":\n" +
+            JSON.stringify(genData, null, 2) + "\n\n";
+          
+          if (!genData.content) {
+            throw new Error("No content in generation response for verse " + currentVerse);
+          }
+          
+          let rawText = Array.isArray(genData.content)
+            ? genData.content.map(item => item.text).join("\n\n")
+            : genData.content;
+          
+          // --- Step 1: First round of substitution on raw text ---
+          let rawTextSub1 = replaceForbiddenWords(rawText, config);
+          document.getElementById("rawOutput").innerText += "Verse " + currentVerse + ":\n" + rawTextSub1 + "\n\n";
+          
+          // --- Step 2: Verify prompt using the substituted raw text ---
+          let reviewResponse = await verifyPrompt(rawTextSub1);
+          // Apply a second substitution on the review response.
+          let reviewResponseSub2 = replaceForbiddenWords(reviewResponse, config);
+          document.getElementById("reviewedOutput").innerText += "Verse " + currentVerse + ":\n" + reviewResponseSub2 + "\n\n";
+          
+          // Store this verse's final prompt (using the review response)
+          combinedPrompts.push(reviewResponseSub2);
+        } catch (error) {
+          document.getElementById("debugOutput").innerText += "Error for verse " + currentVerse + ":\n" + error.toString() + "\n\n";
         }
-        
-        let rawText = Array.isArray(genData.content)
-          ? genData.content.map(item => item.text).join("\n\n")
-          : genData.content;
-        
-        // --- Step 1: Apply first keyword substitution on raw text ---
-        const rawTextSub1 = replaceForbiddenWords(rawText, config);
-        document.getElementById("rawOutput").innerText = rawTextSub1;
-        conversation.push({ role: "assistant", content: rawTextSub1 });
-        
-        // 2) Verify the raw prompts (using already substituted text)
-        const reviewResponse = await verifyPrompt(rawTextSub1);
-        
-        // --- Step 2: Apply second keyword substitution on AI verification response ---
-        const reviewResponseSub2 = replaceForbiddenWords(reviewResponse, config);
-        document.getElementById("reviewedOutput").innerText = reviewResponseSub2;
-        
-        let trimmedReview = reviewResponseSub2.trim();
-        let finalOutput = "";
-        if (/^\d{6}/.test(trimmedReview)) {
-          finalOutput = trimmedReview;
-        } else {
-          finalOutput = "Connection error: Please regenerate prompt";
-          document.getElementById("verifiedOutput").innerText = finalOutput;
-          return;
-        }
-        
-        // 3) Force the correct numbering on the final output
-        const finalNumbered = forcePrefillNaming(finalOutput, surah, verse, batch);
-        document.getElementById("verifiedOutput").innerText = finalNumbered;
-        
-      } catch (error) {
-        console.error("Error:", error);
-        document.getElementById("rawOutput").innerText = "Error generating prompts.";
-        document.getElementById("debugOutput").innerText += "Error Details:\n" + error.toString() + "\n";
       }
+      
+      // --- Step 3: Combine all prompts with forced numbering ---
+      let finalCombined = "";
+      for (let i = 0; i < combinedPrompts.length; i++) {
+        let code = pad(surah, 3) + pad(verse + i, 3) + " ||| ";
+        finalCombined += code + combinedPrompts[i] + "\n";
+      }
+      document.getElementById("verifiedOutput").innerText = finalCombined;
     });
     // --- End Form Submission ---
   </script>
