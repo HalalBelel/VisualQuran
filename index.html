@@ -47,10 +47,10 @@
       </div>
     </form>
     
-    <h2>Step 1. Replacing Forbidden Words</h2>
+    <h2>Step 1. Replacing Forbidden Words (Raw Output)</h2>
     <div id="rawOutput" class="output"></div>
     
-    <h2>Step 2. AI Verification</h2>
+    <h2>Step 2. AI Halal Verification (After Substitution)</h2>
     <div id="reviewedOutput" class="output"></div>
     
     <h2>Step 3. Final Output (Text Prompts)</h2>
@@ -67,6 +67,21 @@
     // --- Helper Functions ---
     function pad(num, size) {
       return num.toString().padStart(size, '0');
+    }
+    
+    // Replace forbidden keywords using config arrays.
+    function replaceForbiddenWords(text, config) {
+      let forbidden = [].concat(
+        config.FORBIDDEN_EVIL_WORDS || [],
+        config.FORBIDDEN_NEUTRAL_WORDS || [],
+        config.FORBIDDEN_SPIRITUAL_WORDS || []
+      );
+      let replacedText = text;
+      forbidden.forEach(entry => {
+        let regex = new RegExp(entry.keyword, "gi");
+        replacedText = replacedText.replace(regex, entry.halal_substitute);
+      });
+      return replacedText;
     }
     
     // If not enough prompts are returned, fill in missing lines with a default message.
@@ -182,14 +197,7 @@
       };
       document.getElementById("debugOutput").innerText +=
         "Verification Payload Sent:\n" +
-        JSON.stringify(
-          {
-            ...payload,
-            messages: "[omitted for brevity]"
-          },
-          null,
-          2
-        ) +
+        JSON.stringify({ ...payload, messages: "[omitted for brevity]" }, null, 2) +
         "\n\n";
       
       const response = await fetch(config.VERCEL_PROXY_URL, {
@@ -206,7 +214,6 @@
         throw new Error("No content in verification response");
       }
       
-      // If data.content is an array, join all text blocks
       let reviewResponse = Array.isArray(data.content)
         ? data.content.map(item => item.text).join("\n\n")
         : data.content;
@@ -275,14 +282,7 @@
       
       document.getElementById("debugOutput").innerText +=
         "Prompt Generation Payload Sent:\n" +
-        JSON.stringify(
-          {
-            ...generationPayload,
-            messages: "[omitted for brevity]"
-          },
-          null,
-          2
-        ) +
+        JSON.stringify({ ...generationPayload, messages: "[omitted for brevity]" }, null, 2) +
         "\n\n";
       
       try {
@@ -305,14 +305,19 @@
           ? genData.content.map(item => item.text).join("\n\n")
           : genData.content;
         
-        document.getElementById("rawOutput").innerText = rawText;
-        conversation.push({ role: "assistant", content: rawText });
+        // --- Step 1: Apply first keyword substitution on raw text ---
+        const rawTextSub1 = replaceForbiddenWords(rawText, config);
+        document.getElementById("rawOutput").innerText = rawTextSub1;
+        conversation.push({ role: "assistant", content: rawTextSub1 });
         
-        // 2) Verify the raw prompts
-        const reviewResponse = await verifyPrompt(rawText);
-        document.getElementById("reviewedOutput").innerText = reviewResponse;
+        // 2) Verify the raw prompts (using already substituted text)
+        const reviewResponse = await verifyPrompt(rawTextSub1);
         
-        let trimmedReview = reviewResponse.trim();
+        // --- Step 2: Apply second keyword substitution on AI verification response ---
+        const reviewResponseSub2 = replaceForbiddenWords(reviewResponse, config);
+        document.getElementById("reviewedOutput").innerText = reviewResponseSub2;
+        
+        let trimmedReview = reviewResponseSub2.trim();
         let finalOutput = "";
         if (/^\d{6}/.test(trimmedReview)) {
           finalOutput = trimmedReview;
@@ -322,15 +327,14 @@
           return;
         }
         
-        // 3) Force the correct numbering
+        // 3) Force the correct numbering on the final output
         const finalNumbered = forcePrefillNaming(finalOutput, surah, verse, batch);
         document.getElementById("verifiedOutput").innerText = finalNumbered;
         
       } catch (error) {
         console.error("Error:", error);
         document.getElementById("rawOutput").innerText = "Error generating prompts.";
-        document.getElementById("debugOutput").innerText += 
-          "Error Details:\n" + error.toString() + "\n";
+        document.getElementById("debugOutput").innerText += "Error Details:\n" + error.toString() + "\n";
       }
     });
     // --- End Form Submission ---
