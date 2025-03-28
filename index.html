@@ -88,7 +88,6 @@
       });
       return replacedText;
     }
-    
     // --- End Helper Functions ---
     
     // --- Version Info ---
@@ -163,16 +162,19 @@
     // --- End Update Verse Dropdown ---
     
     // --- Verify Prompt ---
-    // The payload instructs Claude (via config.REVIEW_INSTRUCTIONS) to start exactly with the prefill.
+    // The payload now substitutes "{PREFILL}" in both the review system role and review instructions with the actual prefill.
     async function verifyPrompt(rawText, prefill) {
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
+      const reviewInstructions = config.REVIEW_INSTRUCTIONS.replace("{PREFILL}", prefill);
+      const reviewSystemRole = config.REVIEW_SYSTEM_ROLE.replace("{PREFILL}", prefill);
+      
       const payload = {
         model: config.MODEL_NAME,
         max_tokens: maxTokens,
-        system: config.REVIEW_SYSTEM_ROLE,
+        system: reviewSystemRole,
         messages: [
           { role: "assistant", content: prefill + "\n" + rawText },
-          { role: "user", content: config.REVIEW_INSTRUCTIONS }
+          { role: "user", content: reviewInstructions }
         ]
       };
       document.getElementById("debugOutput").innerText += "Verification Payload Sent:\n" +
@@ -286,7 +288,7 @@
           // --- Step 2: Verify prompt using the substituted raw text ---
           let reviewResponse = await verifyPrompt(rawTextSub1, expectedPrefillForVerse);
           let reviewResponseSub2 = replaceForbiddenWords(reviewResponse, config);
-          // Now, no HTML-side substitution is done. Claude is instructed via REVIEW_INSTRUCTIONS to start with the prefill.
+          // No additional substitution; Claude is instructed (via substituted review instructions) to start with the prefill.
           document.getElementById("reviewedOutput").innerText += reviewResponseSub2 + "\n\n";
           
           // Store this verse's final prompt (using the review response)
