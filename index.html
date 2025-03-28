@@ -161,8 +161,7 @@
     });
     // --- End Update Verse Dropdown ---
     
-    // --- Verify Prompt ---
-    // The payload now substitutes "{PREFILL}" in both the review system role and review instructions with the actual prefill.
+    // --- Verify Prompt (Reviewer/Editor) ---
     async function verifyPrompt(rawText, prefill) {
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const reviewInstructions = config.REVIEW_INSTRUCTIONS.replace("{PREFILL}", prefill);
@@ -249,14 +248,13 @@
           .replace("{VERSE_PADDED}", pad(currentVerse, 3))
           .replace("{PREFILL}", expectedPrefillForVerse);
         
-        let newUserInstructionForVerse = config.COMMON_SYSTEM_ROLE + "\n" + userInstructionForVerse;
-        let maxTokens = 1 * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
+        // Do not prepend the role onto the user message; the system field already sends config.USER_SYSTEM_ROLE.
         let generationPayload = {
           model: config.MODEL_NAME,
-          max_tokens: maxTokens,
-          system: config.SYSTEM_ROLE,
+          max_tokens: 1 * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD,
+          system: config.USER_SYSTEM_ROLE,
           messages: [
-            { role: "user", content: newUserInstructionForVerse }
+            { role: "user", content: userInstructionForVerse }
           ]
         };
         
@@ -288,7 +286,6 @@
           // --- Step 2: Verify prompt using the substituted raw text ---
           let reviewResponse = await verifyPrompt(rawTextSub1, expectedPrefillForVerse);
           let reviewResponseSub2 = replaceForbiddenWords(reviewResponse, config);
-          // No additional substitution; Claude is instructed (via substituted review instructions) to start with the prefill.
           document.getElementById("reviewedOutput").innerText += reviewResponseSub2 + "\n\n";
           
           // Store this verse's final prompt (using the review response)
