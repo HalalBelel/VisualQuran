@@ -83,36 +83,12 @@
       );
       let replacedText = text;
       forbidden.forEach(entry => {
-        // Use word boundaries to match full words.
         let regex = new RegExp("\\b" + escapeRegExp(entry.keyword) + "\\b", "gi");
         replacedText = replacedText.replace(regex, entry.halal_substitute);
       });
       return replacedText;
     }
     
-    // Force correct numbering if needed.
-    function forcePrefillNaming(text, startSurah, startVerse, batch) {
-      const delimiter = " ||| ";
-      const paragraphs = text.split("\n\n").filter(p => p.trim() !== "");
-      let corrected = [];
-      for (let i = 0; i < batch; i++) {
-        const code = `${pad(startSurah, 3)}${pad(startVerse + i, 3)}${delimiter}`;
-        let content = "";
-        if (i < paragraphs.length) {
-          let p = paragraphs[i].trim();
-          const index = p.indexOf(delimiter);
-          if (index !== -1) {
-            content = p.substring(index + delimiter.length).trim();
-          } else {
-            content = p;
-          }
-        } else {
-          content = "No prompt generated.";
-        }
-        corrected.push(code + content);
-      }
-      return corrected.join("\n");
-    }
     // --- End Helper Functions ---
     
     // --- Version Info ---
@@ -187,7 +163,7 @@
     // --- End Update Verse Dropdown ---
     
     // --- Verify Prompt ---
-    // Modified to accept a 'prefill' parameter and use a different system role for review.
+    // The payload instructs Claude (via config.REVIEW_INSTRUCTIONS) to start exactly with the prefill.
     async function verifyPrompt(rawText, prefill) {
       const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
       const payload = {
@@ -305,14 +281,12 @@
           
           // --- Step 1: First round of substitution on raw text ---
           let rawTextSub1 = replaceForbiddenWords(rawText, config);
-          // Append without extra verse labels
           document.getElementById("rawOutput").innerText += rawTextSub1 + "\n\n";
           
           // --- Step 2: Verify prompt using the substituted raw text ---
-          // Now passing the expected prefill along with the raw text.
           let reviewResponse = await verifyPrompt(rawTextSub1, expectedPrefillForVerse);
-          // Apply a second substitution on the review response.
           let reviewResponseSub2 = replaceForbiddenWords(reviewResponse, config);
+          // Now, no HTML-side substitution is done. Claude is instructed via REVIEW_INSTRUCTIONS to start with the prefill.
           document.getElementById("reviewedOutput").innerText += reviewResponseSub2 + "\n\n";
           
           // Store this verse's final prompt (using the review response)
@@ -322,13 +296,8 @@
         }
       }
       
-      // --- Step 3: Combine all prompts with forced numbering ---
-      let finalCombined = "";
-      for (let i = 0; i < combinedPrompts.length; i++) {
-        let code = pad(surah, 3) + pad(verse + i, 3) + " ||| ";
-        finalCombined += code + combinedPrompts[i] + "\n";
-      }
-      document.getElementById("verifiedOutput").innerText = finalCombined;
+      // --- Step 3: Combine all prompts without extra numbering ---
+      document.getElementById("verifiedOutput").innerText = combinedPrompts.join("\n");
     });
     // --- End Form Submission ---
   </script>
