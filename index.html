@@ -251,6 +251,7 @@
         // Do not prepend the role onto the user message; the system field already sends config.USER_SYSTEM_ROLE.
         let generationPayload = {
           model: config.MODEL_NAME,
+          n: 1, // Ensure only one completion is returned.
           max_tokens: 1 * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD,
           system: config.USER_SYSTEM_ROLE,
           messages: [
@@ -276,7 +277,7 @@
           }
           
           let rawText = Array.isArray(genData.content)
-            ? genData.content.map(item => item.text).join("\n\n")
+            ? genData.content[0].text
             : genData.content;
           
           // --- Step 1: First round of substitution on raw text ---
