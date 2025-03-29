@@ -71,6 +71,8 @@
     { "keyword": "Idols", "halal_substitute": "small clay bricks" },
     { "keyword": "Statue", "halal_substitute": "smooth stone slab" },
     { "keyword": "Statues", "halal_substitute": "smooth stone slabs" },
+    { "keyword": "figure", "halal_substitute": "small clay blocks" },
+    { "keyword": "figures", "halal_substitute": "small clay block" },
     { "keyword": "figurines", "halal_substitute": "small clay blocks" },
     { "keyword": "figurine", "halal_substitute": "small clay block" },
     { "keyword": "carvings", "halal_substitute": "detailed stone textures" },
@@ -85,6 +87,8 @@
     { "keyword": "object of idol worship", "halal_substitute": "ancient ceremonial remnant" },
     { "keyword": "satanic symbols", "halal_substitute": "etched dark marks" },
     { "keyword": "satanic symbol", "halal_substitute": "etched dark mark" },
+    { "keyword": "satanic", "halal_substitute": "etched dark marks" },
+    { "keyword": "satans", "halal_substitute": "etched dark mark" },
     { "keyword": "crosses", "halal_substitute": "intersecting shadow lines" },
     { "keyword": "cross", "halal_substitute": "intersecting shadow line" }
   ],
