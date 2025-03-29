@@ -239,16 +239,14 @@
           .replace("{VERSE_PADDED}", pad(currentVerse, 3))
           .trim();
         
-        // For individual calls, set BATCH = 1
         let userInstructionForVerse = config.USER_INSTRUCTION_TEMPLATE
-          .replace("{BATCH}", 1)
           .replace("{SURAH}", surah)
           .replace("{VERSE}", currentVerse)
           .replace("{SURAH_PADDED}", pad(surah, 3))
           .replace("{VERSE_PADDED}", pad(currentVerse, 3))
           .replace("{PREFILL}", expectedPrefillForVerse);
         
-        // Do not prepend the role onto the user message; the system field already sends config.USER_SYSTEM_ROLE.
+        // Do not include the 'n' parameter.
         let generationPayload = {
           model: config.MODEL_NAME,
           max_tokens: 1 * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD,
