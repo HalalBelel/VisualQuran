@@ -3,300 +3,315 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>QV</title>
+  <title>Quran → Blisssymbol Translator</title>
   <style>
-    /* Reset basic elements */
+    /* Basic page styling */
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; color: #333; padding: 20px; line-height: 1.6; }
-    .container { max-width: 960px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    body {
+      font-family: Arial, sans-serif; background: #f0f4f8; color: #333;
+      padding: 20px; line-height: 1.6;
+    }
+    .container {
+      max-width: 960px; margin: 0 auto; background: #fff; padding: 20px;
+      border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
     h1, h2 { text-align: center; margin-bottom: 10px; color: #2c3e50; }
     p { text-align: center; margin-bottom: 20px; }
     form { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-around; margin-bottom: 20px; }
     form > div { flex: 1 1 200px; min-width: 200px; }
     label { display: block; margin-bottom: 5px; font-weight: bold; }
-    select, input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: 10px 20px; border: none; background: #3498db; color: #fff; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s; margin: auto; }
+    select, input[type="number"] {
+      width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px; border: none; background: #3498db; color: #fff;
+      font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s;
+      margin: auto;
+    }
     button:hover { background: #2980b9; }
     .output, .debug, .version {
-      background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; overflow: auto;
+      background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px;
+      margin-bottom: 20px; overflow: auto;
     }
-    .output { max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace; }
+    .output {
+      max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace;
+    }
     .debug { max-height: 300px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>QV</h1>
-    <p>Enter the verse details below. This app will generate textual prompts only.</p>
-    
-    <form id="promptForm">
-      <div id="surahSelectWrapper">
-        <label for="surahSelect">Select Surah:</label>
-        <select id="surahSelect"></select>
-      </div>
-      <div id="verseSelectWrapper">
-        <label for="verseSelect">Select Ayah:</label>
-        <select id="verseSelect"></select>
-      </div>
-      <div id="batchSelectWrapper">
-        <label for="batchSelect">Select Consecutive Verses (max 111):</label>
-        <input id="batchSelect" type="number" min="1" max="111" value="1" />
-      </div>
-      <div style="flex-basis: 100%; text-align: center;">
-        <button type="submit">Generate Prompts</button>
-      </div>
-    </form>
-    
-    <h2>Step 1. Replacing Forbidden Words (Raw Output)</h2>
-    <div id="rawOutput" class="output"></div>
-    
-    <h2>Step 2. AI Halal Verification (After Substitution)</h2>
-    <div id="reviewedOutput" class="output"></div>
-    
-    <h2>Step 3. Final Output (Text Prompts)</h2>
-    <div id="verifiedOutput" class="output"></div>
-    
-    <h2>Debug Information</h2>
-    <pre id="debugOutput" class="debug"></pre>
-    
-    <div id="versionInfo" class="version"></div>
-    <pre id="updatesBox" class="version"></pre>
-  </div>
+<div class="container">
+  <h1>Quran → Blisssymbol Translator</h1>
+  <p>Select a Surah, verse, and optionally multiple consecutive verses.</p>
   
-  <script>
-    // --- Helper Functions ---
-    function pad(num, size) {
-      return num.toString().padStart(size, '0');
+  <form id="promptForm">
+    <div>
+      <label for="surahSelect">Select Surah:</label>
+      <select id="surahSelect"></select>
+    </div>
+    <div>
+      <label for="verseSelect">Select Ayah:</label>
+      <select id="verseSelect"></select>
+    </div>
+    <div>
+      <label for="batchSelect">Consecutive Verses (max 111):</label>
+      <input id="batchSelect" type="number" min="1" max="111" value="1" />
+    </div>
+    <div style="flex-basis: 100%; text-align: center;">
+      <button type="submit">Translate to Bliss</button>
+    </div>
+  </form>
+  
+  <h2>Step 1. Raw Output (IDs from Translator)</h2>
+  <div id="rawOutput" class="output"></div>
+  
+  <h2>Step 2. AI Review (Validating Codes)</h2>
+  <div id="reviewedOutput" class="output"></div>
+  
+  <h2>Step 3. Final Output (Confirmed Blisssymbol IDs)</h2>
+  <div id="verifiedOutput" class="output"></div>
+  
+  <h2>Debug Information</h2>
+  <pre id="debugOutput" class="debug"></pre>
+  
+  <div id="versionInfo" class="version"></div>
+  <pre id="updatesBox" class="version"></pre>
+</div>
+
+<script>
+/***************************************************
+ 1) Setup / Utility
+****************************************************/
+function pad(num, size) {
+  return num.toString().padStart(size, '0');
+}
+const debug = true;
+let config = {};
+let surahData = [];
+
+/***************************************************
+ 2) Load config from a.json
+****************************************************/
+fetch("a.json")
+  .then(response => response.json())
+  .then(data => {
+    config = data;
+    if (debug) {
+      document.getElementById("debugOutput").innerText +=
+        "Loaded config:\n" + JSON.stringify(data, null, 2) + "\n\n";
     }
-    
-    // Escape special characters for regex.
-    function escapeRegExp(string) {
-      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-    
-    // Replace forbidden keywords only on full words using word boundaries.
-    function replaceForbiddenWords(text, config) {
-      let forbidden = [].concat(
-        config.FORBIDDEN_EVIL_WORDS || [],
-        config.FORBIDDEN_NEUTRAL_WORDS || [],
-        config.FORBIDDEN_SPIRITUAL_WORDS || []
-      );
-      let replacedText = text;
-      forbidden.forEach(entry => {
-        let regex = new RegExp("\\b" + escapeRegExp(entry.keyword) + "\\b", "gi");
-        replacedText = replacedText.replace(regex, entry.halal_substitute);
-      });
-      return replacedText;
-    }
-    // --- End Helper Functions ---
-    
-    // --- Version Info ---
-    const AUTHOR_UPDATE = "Notes: kindly send feedback to info@onewordquran.com, may Allah bless the contributors";
-    const modifiedDate = new Date(document.lastModified);
-    const versionText = "Version: " + modifiedDate.toLocaleDateString("en-AU") + " " + modifiedDate.toLocaleTimeString("en-AU");
-    document.getElementById("versionInfo").textContent = versionText;
-    document.getElementById("updatesBox").textContent = AUTHOR_UPDATE + "\n" + versionText;
-    // --- End Version Info ---
-    
-    const debug = true;
-    let conversation = [];
-    
-    // --- Load Configuration ---
-    let config = {};
-    fetch("a.json")
-      .then(response => response.json())
-      .then(data => {
-        config = data;
-        if (debug) {
-          document.getElementById("debugOutput").innerText += "Configuration Loaded:\n" + JSON.stringify(data, null, 2) + "\n\n";
-        }
-      })
-      .catch(err => {
-        console.error("Error loading configuration:", err);
-        alert("Failed to load configuration (a.json).");
-      });
-    // --- End Load Configuration ---
-    
-    // --- Load Surah Data ---
-    let surahData = [];
-    fetch("surahnames.json")
-      .then(response => response.json())
-      .then(data => {
-        surahData = data;
-        const surahSelect = document.getElementById("surahSelect");
-        data.forEach(item => {
-          const option = document.createElement("option");
-          option.value = item["Surah Number"];
-          option.text = item["Surah Number"] + " - " + item["Surah Name"];
-          option.dataset.verses = item["Surah Verses"];
-          surahSelect.appendChild(option);
-        });
-        updateVerseDropdown(parseInt(surahSelect.value));
-      })
-      .catch(err => {
-        console.error("Error loading surah names:", err);
-        document.getElementById("debugOutput").innerText += "Error loading surahnames.json:\n" + err.toString() + "\n";
-      });
-    // --- End Load Surah Data ---
-    
-    function updateVerseDropdown(surahNumber) {
-      const surahItem = surahData.find(item => item["Surah Number"] === surahNumber);
-      const verseSelect = document.getElementById("verseSelect");
-      if (surahItem) {
-        const maxVerse = surahItem["Surah Verses"];
-        verseSelect.innerHTML = "";
-        for (let i = 1; i <= maxVerse; i++) {
-          const option = document.createElement("option");
-          option.value = i;
-          option.text = i;
-          verseSelect.appendChild(option);
-        }
-        verseSelect.value = "1";
-        document.getElementById("debugOutput").innerText += "Updated verse dropdown to 1-" + maxVerse + " for surah " + surahNumber + "\n";
-      }
-    }
-    
-    document.getElementById("surahSelect").addEventListener("change", function() {
-      updateVerseDropdown(parseInt(this.value));
+  })
+  .catch(err => {
+    console.error("Error loading a.json:", err);
+    alert("Failed to load configuration (a.json).");
+  });
+
+/***************************************************
+ 3) Load Surah data (for dropdown)
+    Must have surahnames.json with:
+    [
+      { "Surah Number": 1, "Surah Name": "Al-Fatihah", "Surah Verses": 7 },
+      ...
+    ]
+****************************************************/
+fetch("surahnames.json")
+  .then(response => response.json())
+  .then(data => {
+    surahData = data;
+    const surahSelect = document.getElementById("surahSelect");
+    data.forEach(item => {
+      const option = document.createElement("option");
+      option.value = item["Surah Number"];
+      option.text = item["Surah Number"] + " - " + item["Surah Name"];
+      surahSelect.appendChild(option);
     });
-    // --- End Update Verse Dropdown ---
+    // Default: load verse dropdown for the first Surah
+    updateVerseDropdown(parseInt(surahSelect.value));
+  })
+  .catch(err => {
+    document.getElementById("debugOutput").innerText +=
+      "Error loading surahnames.json:\n" + err.toString() + "\n";
+  });
+
+function updateVerseDropdown(surahNumber) {
+  const surahItem = surahData.find(item => item["Surah Number"] === surahNumber);
+  const verseSelect = document.getElementById("verseSelect");
+  if (!surahItem) return;
+  const maxVerse = surahItem["Surah Verses"];
+  verseSelect.innerHTML = "";
+  for (let i = 1; i <= maxVerse; i++) {
+    const option = document.createElement("option");
+    option.value = i;
+    option.text = i;
+    verseSelect.appendChild(option);
+  }
+  verseSelect.value = "1";
+  if (debug) {
+    document.getElementById("debugOutput").innerText +=
+      "Updated verse dropdown: 1 - " + maxVerse + " (Surah " + surahNumber + ")\n";
+  }
+}
+
+document.getElementById("surahSelect").addEventListener("change", function() {
+  updateVerseDropdown(parseInt(this.value));
+});
+
+/***************************************************
+ 4) AI Review Function
+****************************************************/
+async function reviewBlissIDs(candidateIDs, prefill) {
+  // Build the review payload
+  const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
+  const payload = {
+    model: config.MODEL_NAME,
+    max_tokens: maxTokens,
+    system: config.REVIEW_SYSTEM_ROLE,
+    messages: [
+      { role: "assistant", content: prefill + "\n" + candidateIDs },
+      { role: "user", content: config.REVIEW_INSTRUCTIONS }
+    ]
+  };
+  
+  if (debug) {
+    document.getElementById("debugOutput").innerText +=
+      "Review Payload:\n" + JSON.stringify({ ...payload, messages: "[omitted]" }, null, 2) + "\n\n";
+  }
+  
+  // Send to your AI or proxy endpoint
+  const response = await fetch(config.VERCEL_PROXY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json();
+  
+  if (debug) {
+    document.getElementById("debugOutput").innerText +=
+      "Review Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
+  }
+  
+  // Extract the text from the response
+  let reviewText = Array.isArray(data.content)
+    ? data.content.map(item => item.text).join("\n")
+    : data.content;
+  
+  return reviewText;
+}
+
+/***************************************************
+ 5) On form submission, for each verse:
+    - Build user prompt
+    - “Generate” Bliss IDs (the AI knows the verse)
+    - “Review” them
+    - Show final
+****************************************************/
+document.getElementById("promptForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  
+  const surah = parseInt(document.getElementById("surahSelect").value);
+  const verse = parseInt(document.getElementById("verseSelect").value);
+  const batch = parseInt(document.getElementById("batchSelect").value);
+  
+  // Validate input
+  const surahItem = surahData.find(item => item["Surah Number"] === surah);
+  if (!surahItem) {
+    alert("Invalid surah selected.");
+    return;
+  }
+  const verseMax = surahItem["Surah Verses"];
+  if (verse < 1 || verse > verseMax || batch < 1 || batch > 111) {
+    alert("Invalid verse/batch input.");
+    return;
+  }
+  
+  // Clear old outputs
+  document.getElementById("rawOutput").innerText = "";
+  document.getElementById("reviewedOutput").innerText = "";
+  document.getElementById("verifiedOutput").innerText = "";
+  
+  const finalOutputs = [];
+  
+  for (let offset = 0; offset < batch; offset++) {
+    let currentVerse = verse + offset;
+    if (currentVerse > verseMax) break;
     
-    // --- Verify Prompt (Reviewer/Editor) ---
-    async function verifyPrompt(rawText, prefill) {
-      const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
-      const reviewInstructions = config.REVIEW_INSTRUCTIONS.replace("{PREFILL}", prefill);
-      const reviewSystemRole = config.REVIEW_SYSTEM_ROLE.replace("{PREFILL}", prefill);
-      
-      const payload = {
-        model: config.MODEL_NAME,
-        max_tokens: maxTokens,
-        system: reviewSystemRole,
-        messages: [
-          { role: "assistant", content: prefill + "\n" + rawText },
-          { role: "user", content: reviewInstructions }
-        ]
-      };
-      document.getElementById("debugOutput").innerText += "Verification Payload Sent:\n" +
-        JSON.stringify({ ...payload, messages: "[omitted for brevity]" }, null, 2) + "\n\n";
-      
-      const response = await fetch(config.VERCEL_PROXY_URL, {
+    // Build prefill (e.g., 001002)
+    const prefill = config.PREFILL_TEMPLATE
+      .replace("{SURAH_PADDED}", pad(surah, 3))
+      .replace("{VERSE_PADDED}", pad(currentVerse, 3));
+    
+    // Build user prompt
+    const userPrompt = config.USER_INSTRUCTION_TEMPLATE
+      .replace("{SURAH_PADDED}", pad(surah, 3))
+      .replace("{VERSE_PADDED}", pad(currentVerse, 3));
+    
+    // Generation payload
+    const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
+    const generationPayload = {
+      model: config.MODEL_NAME,
+      max_tokens: maxTokens,
+      system: config.USER_SYSTEM_ROLE,
+      messages: [
+        { role: "user", content: userPrompt }
+      ]
+    };
+    
+    if (debug) {
+      document.getElementById("debugOutput").innerText +=
+        `Generation Payload (Surah=${surah}, Verse=${currentVerse}):\n` +
+        JSON.stringify({ ...generationPayload, messages: "[omitted]" }, null, 2) + "\n\n";
+    }
+    
+    try {
+      // Call your AI or proxy
+      let genRes = await fetch(config.VERCEL_PROXY_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(generationPayload)
       });
-      const data = await response.json();
-      document.getElementById("debugOutput").innerText += "Verification API Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
+      let genData = await genRes.json();
       
-      if (!data.content) {
-        throw new Error("No content in verification response");
+      if (debug) {
+        document.getElementById("debugOutput").innerText +=
+          "Generation Response:\n" + JSON.stringify(genData, null, 2) + "\n\n";
       }
       
-      let reviewResponse = Array.isArray(data.content)
-        ? data.content.map(item => item.text).join("\n\n")
-        : data.content;
-      return reviewResponse;
+      // Extract raw IDs
+      const rawBlissIDs = Array.isArray(genData.content)
+        ? genData.content[0].text
+        : genData.content;
+      
+      // Show in Raw Output
+      document.getElementById("rawOutput").innerText +=
+        `[Surah ${surah}, Verse ${currentVerse}]\n${rawBlissIDs}\n\n`;
+      
+      // Step 2: AI Review
+      let reviewResult = await reviewBlissIDs(rawBlissIDs, prefill);
+      document.getElementById("reviewedOutput").innerText +=
+        `[Surah ${surah}, Verse ${currentVerse} - Validated]\n${reviewResult}\n\n`;
+      
+      // Accumulate final
+      finalOutputs.push(reviewResult.trim());
+      
+    } catch (err) {
+      document.getElementById("debugOutput").innerText +=
+        "Error generating for Surah " + surah + ", Verse " + currentVerse + ":\n" + err.toString() + "\n\n";
     }
-    // --- End Verify Prompt ---
-    
-    // --- Form Submission: Split Batch into Individual Calls ---
-    document.getElementById("promptForm").addEventListener("submit", async function(e) {
-      e.preventDefault();
-      
-      const surah = parseInt(document.getElementById("surahSelect").value);
-      const verse = parseInt(document.getElementById("verseSelect").value);
-      const batch = parseInt(document.getElementById("batchSelect").value);
-      const surahItem = surahData.find(item => item["Surah Number"] === surah);
-      const verseMax = surahItem ? surahItem["Surah Verses"] : Infinity;
-      
-      if (
-        isNaN(surah) || isNaN(verse) || isNaN(batch) ||
-        surah < 1 || surah > 114 ||
-        verse < 1 || verse > verseMax ||
-        batch < 1 || batch > 111
-      ) {
-        alert("Please enter valid inputs.");
-        return;
-      }
-      if (Object.keys(config).length === 0) {
-        alert("Configuration not loaded. Please try again later.");
-        return;
-      }
-      
-      // Clear outputs
-      document.getElementById("rawOutput").innerText = "";
-      document.getElementById("reviewedOutput").innerText = "";
-      document.getElementById("verifiedOutput").innerText = "";
-      
-      let combinedPrompts = [];
-      
-      // Process each verse individually
-      for (let i = 0; i < batch; i++) {
-        let currentVerse = verse + i;
-        
-        // Prepare expected prefill for this verse
-        let expectedPrefillForVerse = config.PREFILL_TEMPLATE
-          .replace("{SURAH_PADDED}", pad(surah, 3))
-          .replace("{VERSE_PADDED}", pad(currentVerse, 3))
-          .trim();
-        
-        let userInstructionForVerse = config.USER_INSTRUCTION_TEMPLATE
-          .replace("{SURAH}", surah)
-          .replace("{VERSE}", currentVerse)
-          .replace("{SURAH_PADDED}", pad(surah, 3))
-          .replace("{VERSE_PADDED}", pad(currentVerse, 3))
-          .replace("{PREFILL}", expectedPrefillForVerse);
-        
-        // Do not include the 'n' parameter.
-        let generationPayload = {
-          model: config.MODEL_NAME,
-          max_tokens: 1 * config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD,
-          system: config.USER_SYSTEM_ROLE,
-          messages: [
-            { role: "user", content: userInstructionForVerse }
-          ]
-        };
-        
-        document.getElementById("debugOutput").innerText += "Prompt Generation Payload for verse " + currentVerse + ":\n" +
-          JSON.stringify({ ...generationPayload, messages: "[omitted for brevity]" }, null, 2) + "\n\n";
-        
-        try {
-          let genRes = await fetch(config.VERCEL_PROXY_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(generationPayload)
-          });
-          let genData = await genRes.json();
-          document.getElementById("debugOutput").innerText += "Generation API Response for verse " + currentVerse + ":\n" +
-            JSON.stringify(genData, null, 2) + "\n\n";
-          
-          if (!genData.content) {
-            throw new Error("No content in generation response for verse " + currentVerse);
-          }
-          
-          let rawText = Array.isArray(genData.content)
-            ? genData.content[0].text
-            : genData.content;
-          
-          // --- Step 1: First round of substitution on raw text ---
-          let rawTextSub1 = replaceForbiddenWords(rawText, config);
-          document.getElementById("rawOutput").innerText += rawTextSub1 + "\n\n";
-          
-          // --- Step 2: Verify prompt using the substituted raw text ---
-          let reviewResponse = await verifyPrompt(rawTextSub1, expectedPrefillForVerse);
-          let reviewResponseSub2 = replaceForbiddenWords(reviewResponse, config);
-          document.getElementById("reviewedOutput").innerText += reviewResponseSub2 + "\n\n";
-          
-          // Store this verse's final prompt (using the review response)
-          combinedPrompts.push(reviewResponseSub2);
-        } catch (error) {
-          document.getElementById("debugOutput").innerText += "Error for verse " + currentVerse + ":\n" + error.toString() + "\n\n";
-        }
-      }
-      
-      // --- Step 3: Combine all prompts without extra numbering ---
-      document.getElementById("verifiedOutput").innerText = combinedPrompts.join("\n");
-    });
-    // --- End Form Submission ---
-  </script>
+  }
+  
+  // Step 3: Show final combined
+  document.getElementById("verifiedOutput").innerText = finalOutputs.join("\n");
+});
+
+/***************************************************
+ 6) Version Info
+****************************************************/
+const AUTHOR_NOTES = "Quran→Bliss. Feedback: info@yourdomain.com";
+const modifiedDate = new Date(document.lastModified);
+const versionText = "Version: " +
+  modifiedDate.toLocaleDateString() + " " + modifiedDate.toLocaleTimeString();
+document.getElementById("versionInfo").textContent = versionText;
+document.getElementById("updatesBox").textContent = AUTHOR_NOTES + "\n" + versionText;
+</script>
 </body>
 </html>
