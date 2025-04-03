@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quran → Blisssymbol Translator</title>
+  <title>Quran → Blisssymbol Translator (Verbose Debug)</title>
   <style>
     /* Basic page styling */
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -17,9 +17,16 @@
     }
     h1, h2 { text-align: center; margin-bottom: 10px; color: #2c3e50; }
     p { text-align: center; margin-bottom: 20px; }
-    form { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-around; margin-bottom: 20px; }
-    form > div { flex: 1 1 200px; min-width: 200px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    form {
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-around;
+      margin-bottom: 20px;
+    }
+    form > div {
+      flex: 1 1 200px; min-width: 200px;
+    }
+    label {
+      display: block; margin-bottom: 5px; font-weight: bold;
+    }
     select, input[type="number"] {
       width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
     }
@@ -28,7 +35,9 @@
       font-size: 1rem; border-radius: 4px; cursor: pointer; transition: background 0.3s;
       margin: auto;
     }
-    button:hover { background: #2980b9; }
+    button:hover {
+      background: #2980b9;
+    }
     .output, .debug, .version {
       background: #f7f7f7; padding: 15px; border: 1px solid #ddd; border-radius: 4px;
       margin-bottom: 20px; overflow: auto;
@@ -36,12 +45,12 @@
     .output {
       max-height: 300px; white-space: pre-wrap; font-family: "Courier New", Courier, monospace;
     }
-    .debug { max-height: 300px; }
+    .debug { max-height: 400px; }
   </style>
 </head>
 <body>
 <div class="container">
-  <h1>Quran → Blisssymbol Translator</h1>
+  <h1>Quran → Blisssymbol Translator (Verbose Debug)</h1>
   <p>Select a Surah, verse, and optionally multiple consecutive verses.</p>
   
   <form id="promptForm">
@@ -71,7 +80,7 @@
   <h2>Step 3. Final Output (Confirmed Blisssymbol IDs)</h2>
   <div id="verifiedOutput" class="output"></div>
   
-  <h2>Debug Information</h2>
+  <h2>Debug Information (Verbose)</h2>
   <pre id="debugOutput" class="debug"></pre>
   
   <div id="versionInfo" class="version"></div>
@@ -80,101 +89,317 @@
 
 <script>
 /***************************************************
-  For each verse, we do:
-  - Build the prompt
-  - Call the AI endpoint
-  - Log *all* data with no omission
+ 1) Setup / Utility
 ****************************************************/
+function pad(num, size) {
+  return num.toString().padStart(size, '0');
+}
+const debug = true;
+let config = {};
+let surahData = [];
 
-async function translateVerse(generationPayload, surah, verse) {
-  // 1) Show entire payload in debug
+/***************************************************
+ 2) Load config from a.json
+****************************************************/
+fetch("a.json")
+  .then(response => response.json())
+  .then(data => {
+    config = data;
+    if (debug) {
+      document.getElementById("debugOutput").innerText +=
+        "[CONFIG LOADED]\n" + JSON.stringify(data, null, 2) + "\n\n";
+    }
+  })
+  .catch(err => {
+    console.error("Error loading a.json:", err);
+    document.getElementById("debugOutput").innerText +=
+      "[ERROR] Failed to load a.json: " + err.toString() + "\n";
+    alert("Failed to load configuration (a.json).");
+  });
+
+/***************************************************
+ 3) Load Surah data (for dropdown)
+****************************************************/
+fetch("surahnames.json")
+  .then(response => response.json())
+  .then(data => {
+    surahData = data;
+    const surahSelect = document.getElementById("surahSelect");
+    data.forEach(item => {
+      const option = document.createElement("option");
+      option.value = item["Surah Number"];
+      option.text = item["Surah Number"] + " - " + item["Surah Name"];
+      surahSelect.appendChild(option);
+    });
+    // Default: load verse dropdown for the first Surah
+    updateVerseDropdown(parseInt(surahSelect.value));
+  })
+  .catch(err => {
+    document.getElementById("debugOutput").innerText +=
+      "[ERROR] Loading surahnames.json:\n" + err.toString() + "\n";
+  });
+
+function updateVerseDropdown(surahNumber) {
+  const surahItem = surahData.find(item => item["Surah Number"] === surahNumber);
+  const verseSelect = document.getElementById("verseSelect");
+  if (!surahItem) return;
+  const maxVerse = surahItem["Surah Verses"];
+  verseSelect.innerHTML = "";
+  for (let i = 1; i <= maxVerse; i++) {
+    const option = document.createElement("option");
+    option.value = i;
+    option.text = i;
+    verseSelect.appendChild(option);
+  }
+  verseSelect.value = "1";
+  if (debug) {
+    document.getElementById("debugOutput").innerText +=
+      `[DROPDOWN] Surah ${surahNumber}, Verses 1 - ${maxVerse}\n`;
+  }
+}
+
+document.getElementById("surahSelect").addEventListener("change", function() {
+  updateVerseDropdown(parseInt(this.value));
+});
+
+/***************************************************
+ 4) Verbose fetch call for GENERATION step
+    - Logs entire request body
+    - Logs raw response (even if HTML)
+    - Parses JSON carefully
+****************************************************/
+async function generateBlissIDs(payload, surah, verse) {
+  // Log entire payload
   document.getElementById("debugOutput").innerText +=
     `\n--- GENERATION PAYLOAD (Surah ${surah}, Verse ${verse}) ---\n` +
-    JSON.stringify(generationPayload, null, 2) + "\n\n";
+    JSON.stringify(payload, null, 2) + "\n";
 
   try {
-    // 2) Fetch the endpoint
+    // Call your AI or proxy
     const response = await fetch(config.VERCEL_PROXY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(generationPayload)
+      body: JSON.stringify(payload)
     });
 
-    // 3) Read raw text first
+    // Read response as TEXT first
     const rawText = await response.text();
 
-    // 4) Log raw text & status in debug
+    // Log raw text & status
     document.getElementById("debugOutput").innerText +=
       `--- GENERATION RESPONSE (HTTP ${response.status}) ---\n` +
       rawText + "\n\n";
 
-    // 5) Check HTTP status
     if (!response.ok) {
-      // This means a non-2xx code (e.g. 404, 500)
-      throw new Error(`HTTP Error ${response.status}. See debug output for details.`);
+      // Non-2xx status
+      throw new Error(`Generation call failed (HTTP ${response.status}). See debug above.`);
     }
 
-    // 6) Attempt to parse as JSON
+    // Attempt to parse JSON
     let genData;
     try {
       genData = JSON.parse(rawText);
     } catch (parseErr) {
-      // The raw text is not valid JSON (e.g. HTML error page)
-      throw new Error("JSON parse error: " + parseErr.message);
+      throw new Error("JSON parse error on generation response: " + parseErr.message);
     }
 
-    // 7) If parsed OK, we can safely extract the content
+    // Check for content
     if (!genData.content) {
-      throw new Error("No 'content' field in JSON response. Full object:\n" + JSON.stringify(genData, null, 2));
+      throw new Error("Missing 'content' in generation response JSON:\n" + JSON.stringify(genData, null, 2));
     }
 
-    // 8) Return the text portion (or array) for further processing
+    // Return the text from content
     if (Array.isArray(genData.content)) {
       return genData.content[0].text;
     } else {
       return genData.content;
     }
-
   } catch (err) {
-    // 9) Catch *all* errors
+    // Log the error
     document.getElementById("debugOutput").innerText +=
       `--- GENERATION ERROR (Surah ${surah}, Verse ${verse}) ---\n` +
       err.toString() + "\n\n";
-    throw err; // re-throw so the caller knows
+    throw err; // re-throw so calling code sees it
   }
 }
 
 /***************************************************
-  Usage Example inside your form submission
+ 5) Verbose fetch call for REVIEW step
+    - Logs entire request body
+    - Logs raw response
+    - Parses JSON carefully
 ****************************************************/
-document.getElementById("promptForm").addEventListener("submit", async function(e) {
-  e.preventDefault();
-
-  // (Pretend we have surah, verse, userPrompt, etc.)
-  const surah = parseInt(document.getElementById("surahSelect").value);
-  const verse = parseInt(document.getElementById("verseSelect").value);
-
-  // Build the generation payload (example)
-  const generationPayload = {
+async function reviewBlissIDs(candidateIDs, prefill) {
+  // Build the review payload
+  const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
+  const payload = {
     model: config.MODEL_NAME,
-    max_tokens: config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD,
-    system: config.USER_SYSTEM_ROLE,
+    max_tokens: maxTokens,
+    system: config.REVIEW_SYSTEM_ROLE,
     messages: [
-      { role: "user", content: "Your user prompt here for Surah/Verse" }
+      { role: "assistant", content: prefill + "\n" + candidateIDs },
+      { role: "user", content: config.REVIEW_INSTRUCTIONS }
     ]
   };
 
-  // Call our new verbose function
+  // Log entire payload
+  document.getElementById("debugOutput").innerText +=
+    `\n--- REVIEW PAYLOAD (Prefill: ${prefill}) ---\n` +
+    JSON.stringify(payload, null, 2) + "\n";
+
   try {
-    const rawBlissIDs = await translateVerse(generationPayload, surah, verse);
-    // Now you have your rawBlissIDs, do the next steps...
-    document.getElementById("rawOutput").innerText +=
-      `Surah ${surah}, Verse ${verse}:\n${rawBlissIDs}\n\n`;
+    const response = await fetch(config.VERCEL_PROXY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    // Read raw text
+    const rawText = await response.text();
+
+    // Log raw text & status
+    document.getElementById("debugOutput").innerText +=
+      `--- REVIEW RESPONSE (HTTP ${response.status}) ---\n` +
+      rawText + "\n\n";
+
+    if (!response.ok) {
+      throw new Error(`Review call failed (HTTP ${response.status}). See debug above.`);
+    }
+
+    let reviewData;
+    try {
+      reviewData = JSON.parse(rawText);
+    } catch (parseErr) {
+      throw new Error("JSON parse error on review response: " + parseErr.message);
+    }
+
+    if (!reviewData.content) {
+      throw new Error("No 'content' in review JSON:\n" + JSON.stringify(reviewData, null, 2));
+    }
+
+    if (Array.isArray(reviewData.content)) {
+      return reviewData.content[0].text;
+    } else {
+      return reviewData.content;
+    }
   } catch (err) {
-    // Already logged error in debug, but you can also do something here.
-    alert("Error generating Bliss ID codes. Check the Debug output for details.");
+    document.getElementById("debugOutput").innerText +=
+      `--- REVIEW ERROR (Prefill: ${prefill}) ---\n` +
+      err.toString() + "\n\n";
+    throw err;
   }
+}
+
+/***************************************************
+ 6) Form submission flow:
+    - For each verse in the batch:
+      (a) Build user prompt
+      (b) Generate Bliss codes
+      (c) Review codes
+      (d) Display
+****************************************************/
+document.getElementById("promptForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  
+  if (!config || !config.MODEL_NAME) {
+    alert("Config not loaded or incomplete.");
+    return;
+  }
+
+  const surah = parseInt(document.getElementById("surahSelect").value);
+  const verse = parseInt(document.getElementById("verseSelect").value);
+  const batch = parseInt(document.getElementById("batchSelect").value);
+
+  // Validate
+  const surahItem = surahData.find(item => item["Surah Number"] === surah);
+  if (!surahItem) {
+    alert("Invalid surah selected.");
+    return;
+  }
+  const verseMax = surahItem["Surah Verses"];
+  if (verse < 1 || verse > verseMax) {
+    alert(`Verse out of range. Surah ${surah} has ${verseMax} verses.`);
+    return;
+  }
+  if (batch < 1 || batch > 111) {
+    alert("Please pick a valid batch up to 111.");
+    return;
+  }
+
+  // Clear output
+  document.getElementById("rawOutput").innerText = "";
+  document.getElementById("reviewedOutput").innerText = "";
+  document.getElementById("verifiedOutput").innerText = "";
+  
+  const finalOutputs = [];
+
+  for (let offset = 0; offset < batch; offset++) {
+    const currentVerse = verse + offset;
+    if (currentVerse > verseMax) break; // don't exceed surah verse count
+    
+    // Build the 'prefill' (e.g. "103001")
+    const prefill = config.PREFILL_TEMPLATE
+      .replace("{SURAH_PADDED}", pad(surah, 3))
+      .replace("{VERSE_PADDED}", pad(currentVerse, 3));
+
+    // Build user instruction
+    const userPrompt = config.USER_INSTRUCTION_TEMPLATE
+      .replace("{SURAH_PADDED}", pad(surah, 3))
+      .replace("{VERSE_PADDED}", pad(currentVerse, 3));
+
+    // Prepare generation payload
+    const genPayload = {
+      model: config.MODEL_NAME,
+      max_tokens: config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD,
+      system: config.USER_SYSTEM_ROLE,
+      messages: [
+        { role: "user", content: userPrompt }
+      ]
+    };
+
+    // (a) Generate
+    let rawBlissIDs;
+    try {
+      rawBlissIDs = await generateBlissIDs(genPayload, surah, currentVerse);
+    } catch (errGen) {
+      alert(`Error generating Bliss IDs for Surah ${surah}, Verse ${currentVerse}. See Debug Output.`);
+      continue; // or break, depending on your preference
+    }
+    
+    // Show raw output
+    document.getElementById("rawOutput").innerText +=
+      `[Surah ${surah}, Verse ${currentVerse}]\n${rawBlissIDs}\n\n`;
+
+    // (b) Review
+    let reviewedIDs;
+    try {
+      reviewedIDs = await reviewBlissIDs(rawBlissIDs, prefill);
+    } catch (errReview) {
+      alert(`Error reviewing Bliss IDs for Surah ${surah}, Verse ${currentVerse}. See Debug Output.`);
+      continue;
+    }
+
+    // Show reviewed output
+    document.getElementById("reviewedOutput").innerText +=
+      `[Surah ${surah}, Verse ${currentVerse} - Validated]\n${reviewedIDs}\n\n`;
+
+    // Collect final
+    finalOutputs.push(reviewedIDs.trim());
+  }
+
+  // (c) Show combined final
+  document.getElementById("verifiedOutput").innerText = finalOutputs.join("\n");
 });
+
+/***************************************************
+ 7) Version Info / Etc.
+****************************************************/
+const AUTHOR_NOTES = "Quran→Bliss (Verbose Debug) • Contact: support@example.com";
+const modifiedDate = new Date(document.lastModified);
+const versionText = "Version: " +
+  modifiedDate.toLocaleDateString() + " " + modifiedDate.toLocaleTimeString();
+document.getElementById("versionInfo").textContent = versionText;
+document.getElementById("updatesBox").textContent = AUTHOR_NOTES + "\n" + versionText;
 </script>
 </body>
 </html>
