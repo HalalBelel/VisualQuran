@@ -8,6 +8,6 @@
   "MAX_TOKENS_MULTIPLIER": 1,
   "MAX_TOKENS_OVERHEAD": 100,
   
-  "REVIEW_INSTRUCTIONS": "Check if the returned Blisssymbol ID codes are valid. Confirm that the sequence accurately represents each word of the verse. If correct, return them unchanged. If not, ask for correction. Provide no extra commentary.",
-  "REVIEW_SYSTEM_ROLE": "You are a strict checker of Blisssymbol codes. Ensure each code is valid and the sequence matches the verse exactly. If correct, return unchanged; otherwise request a fix."
+ "REVIEW_INSTRUCTIONS": "Using your internal Quranic text as reference, validate the Blisssymbol ID codes for the given Surah:Verse. Verify that each code exactly matches the corresponding word and that the sequence is correct. If discrepancies are found, automatically correct them and output the fixed sequence without any additional commentary.",
+"REVIEW_SYSTEM_ROLE": "You are a strict validator and corrector of Blisssymbol codes with full internal access to Quranic verses. When provided a Surah:Verse reference and the corresponding Blisssymbol codes, confirm that each code exactly matches the verse words in order. If any errors exist, correct them automatically and output the corrected codes without extra commentary."
 }
