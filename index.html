@@ -80,238 +80,101 @@
 
 <script>
 /***************************************************
- 1) Setup / Utility
+  For each verse, we do:
+  - Build the prompt
+  - Call the AI endpoint
+  - Log *all* data with no omission
 ****************************************************/
-function pad(num, size) {
-  return num.toString().padStart(size, '0');
-}
-const debug = true;
-let config = {};
-let surahData = [];
 
-/***************************************************
- 2) Load config from a.json
-****************************************************/
-fetch("a.json")
-  .then(response => response.json())
-  .then(data => {
-    config = data;
-    if (debug) {
-      document.getElementById("debugOutput").innerText +=
-        "Loaded config:\n" + JSON.stringify(data, null, 2) + "\n\n";
-    }
-  })
-  .catch(err => {
-    console.error("Error loading a.json:", err);
-    alert("Failed to load configuration (a.json).");
-  });
+async function translateVerse(generationPayload, surah, verse) {
+  // 1) Show entire payload in debug
+  document.getElementById("debugOutput").innerText +=
+    `\n--- GENERATION PAYLOAD (Surah ${surah}, Verse ${verse}) ---\n` +
+    JSON.stringify(generationPayload, null, 2) + "\n\n";
 
-/***************************************************
- 3) Load Surah data (for dropdown)
-    Must have surahnames.json with:
-    [
-      { "Surah Number": 1, "Surah Name": "Al-Fatihah", "Surah Verses": 7 },
-      ...
-    ]
-****************************************************/
-fetch("surahnames.json")
-  .then(response => response.json())
-  .then(data => {
-    surahData = data;
-    const surahSelect = document.getElementById("surahSelect");
-    data.forEach(item => {
-      const option = document.createElement("option");
-      option.value = item["Surah Number"];
-      option.text = item["Surah Number"] + " - " + item["Surah Name"];
-      surahSelect.appendChild(option);
+  try {
+    // 2) Fetch the endpoint
+    const response = await fetch(config.VERCEL_PROXY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(generationPayload)
     });
-    // Default: load verse dropdown for the first Surah
-    updateVerseDropdown(parseInt(surahSelect.value));
-  })
-  .catch(err => {
-    document.getElementById("debugOutput").innerText +=
-      "Error loading surahnames.json:\n" + err.toString() + "\n";
-  });
 
-function updateVerseDropdown(surahNumber) {
-  const surahItem = surahData.find(item => item["Surah Number"] === surahNumber);
-  const verseSelect = document.getElementById("verseSelect");
-  if (!surahItem) return;
-  const maxVerse = surahItem["Surah Verses"];
-  verseSelect.innerHTML = "";
-  for (let i = 1; i <= maxVerse; i++) {
-    const option = document.createElement("option");
-    option.value = i;
-    option.text = i;
-    verseSelect.appendChild(option);
-  }
-  verseSelect.value = "1";
-  if (debug) {
+    // 3) Read raw text first
+    const rawText = await response.text();
+
+    // 4) Log raw text & status in debug
     document.getElementById("debugOutput").innerText +=
-      "Updated verse dropdown: 1 - " + maxVerse + " (Surah " + surahNumber + ")\n";
+      `--- GENERATION RESPONSE (HTTP ${response.status}) ---\n` +
+      rawText + "\n\n";
+
+    // 5) Check HTTP status
+    if (!response.ok) {
+      // This means a non-2xx code (e.g. 404, 500)
+      throw new Error(`HTTP Error ${response.status}. See debug output for details.`);
+    }
+
+    // 6) Attempt to parse as JSON
+    let genData;
+    try {
+      genData = JSON.parse(rawText);
+    } catch (parseErr) {
+      // The raw text is not valid JSON (e.g. HTML error page)
+      throw new Error("JSON parse error: " + parseErr.message);
+    }
+
+    // 7) If parsed OK, we can safely extract the content
+    if (!genData.content) {
+      throw new Error("No 'content' field in JSON response. Full object:\n" + JSON.stringify(genData, null, 2));
+    }
+
+    // 8) Return the text portion (or array) for further processing
+    if (Array.isArray(genData.content)) {
+      return genData.content[0].text;
+    } else {
+      return genData.content;
+    }
+
+  } catch (err) {
+    // 9) Catch *all* errors
+    document.getElementById("debugOutput").innerText +=
+      `--- GENERATION ERROR (Surah ${surah}, Verse ${verse}) ---\n` +
+      err.toString() + "\n\n";
+    throw err; // re-throw so the caller knows
   }
 }
 
-document.getElementById("surahSelect").addEventListener("change", function() {
-  updateVerseDropdown(parseInt(this.value));
-});
-
 /***************************************************
- 4) AI Review Function
-****************************************************/
-async function reviewBlissIDs(candidateIDs, prefill) {
-  // Build the review payload
-  const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
-  const payload = {
-    model: config.MODEL_NAME,
-    max_tokens: maxTokens,
-    system: config.REVIEW_SYSTEM_ROLE,
-    messages: [
-      { role: "assistant", content: prefill + "\n" + candidateIDs },
-      { role: "user", content: config.REVIEW_INSTRUCTIONS }
-    ]
-  };
-  
-  if (debug) {
-    document.getElementById("debugOutput").innerText +=
-      "Review Payload:\n" + JSON.stringify({ ...payload, messages: "[omitted]" }, null, 2) + "\n\n";
-  }
-  
-  // Send to your AI or proxy endpoint
-  const response = await fetch(config.VERCEL_PROXY_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const data = await response.json();
-  
-  if (debug) {
-    document.getElementById("debugOutput").innerText +=
-      "Review Response:\n" + JSON.stringify(data, null, 2) + "\n\n";
-  }
-  
-  // Extract the text from the response
-  let reviewText = Array.isArray(data.content)
-    ? data.content.map(item => item.text).join("\n")
-    : data.content;
-  
-  return reviewText;
-}
-
-/***************************************************
- 5) On form submission, for each verse:
-    - Build user prompt
-    - “Generate” Bliss IDs (the AI knows the verse)
-    - “Review” them
-    - Show final
+  Usage Example inside your form submission
 ****************************************************/
 document.getElementById("promptForm").addEventListener("submit", async function(e) {
   e.preventDefault();
-  
+
+  // (Pretend we have surah, verse, userPrompt, etc.)
   const surah = parseInt(document.getElementById("surahSelect").value);
   const verse = parseInt(document.getElementById("verseSelect").value);
-  const batch = parseInt(document.getElementById("batchSelect").value);
-  
-  // Validate input
-  const surahItem = surahData.find(item => item["Surah Number"] === surah);
-  if (!surahItem) {
-    alert("Invalid surah selected.");
-    return;
-  }
-  const verseMax = surahItem["Surah Verses"];
-  if (verse < 1 || verse > verseMax || batch < 1 || batch > 111) {
-    alert("Invalid verse/batch input.");
-    return;
-  }
-  
-  // Clear old outputs
-  document.getElementById("rawOutput").innerText = "";
-  document.getElementById("reviewedOutput").innerText = "";
-  document.getElementById("verifiedOutput").innerText = "";
-  
-  const finalOutputs = [];
-  
-  for (let offset = 0; offset < batch; offset++) {
-    let currentVerse = verse + offset;
-    if (currentVerse > verseMax) break;
-    
-    // Build prefill (e.g., 001002)
-    const prefill = config.PREFILL_TEMPLATE
-      .replace("{SURAH_PADDED}", pad(surah, 3))
-      .replace("{VERSE_PADDED}", pad(currentVerse, 3));
-    
-    // Build user prompt
-    const userPrompt = config.USER_INSTRUCTION_TEMPLATE
-      .replace("{SURAH_PADDED}", pad(surah, 3))
-      .replace("{VERSE_PADDED}", pad(currentVerse, 3));
-    
-    // Generation payload
-    const maxTokens = config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD;
-    const generationPayload = {
-      model: config.MODEL_NAME,
-      max_tokens: maxTokens,
-      system: config.USER_SYSTEM_ROLE,
-      messages: [
-        { role: "user", content: userPrompt }
-      ]
-    };
-    
-    if (debug) {
-      document.getElementById("debugOutput").innerText +=
-        `Generation Payload (Surah=${surah}, Verse=${currentVerse}):\n` +
-        JSON.stringify({ ...generationPayload, messages: "[omitted]" }, null, 2) + "\n\n";
-    }
-    
-    try {
-      // Call your AI or proxy
-      let genRes = await fetch(config.VERCEL_PROXY_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(generationPayload)
-      });
-      let genData = await genRes.json();
-      
-      if (debug) {
-        document.getElementById("debugOutput").innerText +=
-          "Generation Response:\n" + JSON.stringify(genData, null, 2) + "\n\n";
-      }
-      
-      // Extract raw IDs
-      const rawBlissIDs = Array.isArray(genData.content)
-        ? genData.content[0].text
-        : genData.content;
-      
-      // Show in Raw Output
-      document.getElementById("rawOutput").innerText +=
-        `[Surah ${surah}, Verse ${currentVerse}]\n${rawBlissIDs}\n\n`;
-      
-      // Step 2: AI Review
-      let reviewResult = await reviewBlissIDs(rawBlissIDs, prefill);
-      document.getElementById("reviewedOutput").innerText +=
-        `[Surah ${surah}, Verse ${currentVerse} - Validated]\n${reviewResult}\n\n`;
-      
-      // Accumulate final
-      finalOutputs.push(reviewResult.trim());
-      
-    } catch (err) {
-      document.getElementById("debugOutput").innerText +=
-        "Error generating for Surah " + surah + ", Verse " + currentVerse + ":\n" + err.toString() + "\n\n";
-    }
-  }
-  
-  // Step 3: Show final combined
-  document.getElementById("verifiedOutput").innerText = finalOutputs.join("\n");
-});
 
-/***************************************************
- 6) Version Info
-****************************************************/
-const AUTHOR_NOTES = "Quran→Bliss. Feedback: info@yourdomain.com";
-const modifiedDate = new Date(document.lastModified);
-const versionText = "Version: " +
-  modifiedDate.toLocaleDateString() + " " + modifiedDate.toLocaleTimeString();
-document.getElementById("versionInfo").textContent = versionText;
-document.getElementById("updatesBox").textContent = AUTHOR_NOTES + "\n" + versionText;
+  // Build the generation payload (example)
+  const generationPayload = {
+    model: config.MODEL_NAME,
+    max_tokens: config.MAX_TOKENS_MULTIPLIER + config.MAX_TOKENS_OVERHEAD,
+    system: config.USER_SYSTEM_ROLE,
+    messages: [
+      { role: "user", content: "Your user prompt here for Surah/Verse" }
+    ]
+  };
+
+  // Call our new verbose function
+  try {
+    const rawBlissIDs = await translateVerse(generationPayload, surah, verse);
+    // Now you have your rawBlissIDs, do the next steps...
+    document.getElementById("rawOutput").innerText +=
+      `Surah ${surah}, Verse ${verse}:\n${rawBlissIDs}\n\n`;
+  } catch (err) {
+    // Already logged error in debug, but you can also do something here.
+    alert("Error generating Bliss ID codes. Check the Debug output for details.");
+  }
+});
 </script>
 </body>
 </html>
