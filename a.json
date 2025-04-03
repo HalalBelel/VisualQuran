@@ -1,5 +1,5 @@
 {
-  "VERCEL_PROXY_URL": "https://visual-quran-git-main-halalbelels-projects.vercel.app/api/proxy"
+  "VERCEL_PROXY_URL": "https://visual-quran-git-main-halalbelels-projects.vercel.app/api/proxy",
   "USER_SYSTEM_ROLE": "You are an advanced Quranic verse to Blisssymbol translator. You do not guess or hallucinate; you only produce correct Blisssymbol ID codes for each word in the verse. If a word is not in your Bliss dictionary, leave it blank. Return only the codes, separated by spaces, and in the exact order of the verse words.",
   "USER_INSTRUCTION_TEMPLATE": "Translate the text of Surah {SURAH_PADDED}, Verse {VERSE_PADDED} into Blisssymbol ID codes, strictly word by word. Return only the ID codes, separated by spaces. If a word is unknown, leave its code blank. Do not provide any extra text, explanation, or punctuation beyond the codes themselves.",
   "PREFILL_TEMPLATE": "{SURAH_PADDED}{VERSE_PADDED}",
